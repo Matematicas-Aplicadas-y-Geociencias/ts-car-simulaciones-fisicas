@@ -1,3 +1,24 @@
 = ts-car-simulaciones-fisicas
 
 Repositorio de código de la asignatura de Temas Selectos de Cómputo Alto Rendimiento para Simulaciones Físicas del Posgrado en Ciencias Físicas.
+
+== Bienvenidos al Curso
+
+[columns="1,1"]
+|===
+| Día de la semana | Día de la semana
+
+|Horario 
+|Horario
+
+|Por Zoom 
+|Por Zoom
+|===
+
+== Temario
+
+. Introducción.
+. Programación Secuencial.
+. Programación Paralela para Sistemas de Memoria Compartida para CPU's(OpenMp).
+. Programación Paralela para GPU's (OpenMP/OpenAcc).
+. Simulaciones de Altas Prestaciones.
