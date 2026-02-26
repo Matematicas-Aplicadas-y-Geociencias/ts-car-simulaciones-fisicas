@@ -7,7 +7,7 @@ Program Calor2D
   ! Iteradores y tamaño del problema
   !
   integer :: ii, jj, iter
-  integer, parameter :: nx = 60, ny = 30, itermax=100
+  integer, parameter :: nx = 60, ny = 30, itermax=1e4
   !
   ! Variables del dominio computacional
   !
@@ -27,6 +27,9 @@ Program Calor2D
   double precision :: ay(ny), by(ny), cy(ny) ! Variables para almacenar
   !                                          ! matriz tridiagonal sobredimensionada
   !  
+  double precision :: suma_old, suma_new, diff_norm
+  double precision :: tt_old(nx,ny)
+  double precision :: tol
   ! Dominio computacional
   !
   lx      = 10.d0
@@ -47,6 +50,7 @@ Program Calor2D
   ry(:)   = 0.d0
   tt(:,:) = 0.d0
   !
+  tol = 1e-6
   ! Condiciones de frontera en direcci'on x
   !
   do ii = 1, ny
@@ -57,11 +61,13 @@ Program Calor2D
   ! Condiciones de frontera en direcci'on y
   !
   do jj = 1, nx
-     cfy(jj,1) = 1.d0
+     cfy(jj,1) = 0.d0
      cfy(jj,2) = 0.d0
   end do
   !
   bucle_iteraciones: do iter = 1, itermax
+
+     tt_old = tt
 
      barrido_y: do jj = 2, ny-1
 
@@ -115,7 +121,7 @@ Program Calor2D
         !
         ay(1)     = 0.d0 ! no se usa en los c'alculos
         by(1)     = 1.d0
-        cy(1)     = 0.d0
+        cy(1)     = -1.d0
         ry(1)     = cfy(ii,1)
         !
         ay(ny)    =-1.d0 
@@ -138,6 +144,20 @@ Program Calor2D
         !
      end do barrido_x
      !
+     !
+     !
+     ! Criterio de convergencia
+     !
+     suma_old = sum(tt)
+     suma_new = sum(tt_old)
+     !
+     diff_norm = abs(suma_new - suma_old)
+     !
+     convergencia: if (diff_norm < tol) then
+         write(*, *) '#Iteraciones: ', iter
+         exit bucle_iteraciones
+     end if convergencia
+
   end do bucle_iteraciones
   !
   do jj = 1, ny
