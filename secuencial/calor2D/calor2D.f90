@@ -7,7 +7,7 @@ Program Calor2D
   ! Iteradores y tamaño del problema
   !
   integer :: ii, jj, iter
-  integer, parameter :: nx = 60, ny = 30, itermax=100
+  integer, parameter :: nx = 60, ny = 30, itermax=1000000
   !
   ! Variables del dominio computacional
   !
@@ -17,6 +17,7 @@ Program Calor2D
   !
   double precision :: xx(nx), yy(ny)  ! variables de la malla
   double precision :: tt(nx,ny)       ! vector de incognitas
+  double precision :: tt_old(nx,ny)   ! tem anterior
   double precision :: tx(nx), ty(ny)  ! vectores de incognitas 1D
   double precision :: rx(nx),ry(ny)   ! vector de resultados del s. ecuaciones
   double precision :: cfx(ny,2),cfy(nx,2) ! vector de condiciones de frontera
@@ -26,16 +27,17 @@ Program Calor2D
   !
   double precision :: ay(ny), by(ny), cy(ny) ! Variables para almacenar
   !                                          ! matriz tridiagonal sobredimensionada
-  !  
+  ! VARIABLES PARA EL CRITERIO DE CONVERGENCIA
+  double precision :: tol, diff_max, diff
   ! Dominio computacional
   !
   lx      = 10.d0
   deltax  = lx/nx
   ly      = 5.d0
   deltay  = ly/ny
-  !
+  !Convergencia
+  tol = 1.0d-6 
   ! Inicializacion de variables
-  !
   ! xx(:)   = 0.d0
   ax(:)   = 0.d0
   bx(:)   = 0.d0
@@ -47,14 +49,14 @@ Program Calor2D
   ry(:)   = 0.d0
   tt(:,:) = 0.d0
   !
-  ! Condiciones de frontera en direcci'on x
+  ! Condiciones de frontera en dirección x
   !
   do ii = 1, ny
      cfx(ii,1) = 1.d0
      cfx(ii,2) = 0.d0
   end do
   !
-  ! Condiciones de frontera en direcci'on y
+  ! Condiciones de frontera en dirección y
   !
   do jj = 1, nx
      cfy(jj,1) = 1.d0
@@ -62,7 +64,7 @@ Program Calor2D
   end do
   !
   bucle_iteraciones: do iter = 1, itermax
-
+     tt_old = tt
      barrido_y: do jj = 2, ny-1
 
         ensambla_tri_x: do ii = 2, nx-1
@@ -137,7 +139,25 @@ Program Calor2D
         end do
         !
      end do barrido_x
-     !
+     
+       ! CALCULAR EL CAMBIO MÁXIMO ENTRE ITERACIONES
+  	diff_max = 0.d0
+  	do jj = 1, ny
+     	   do ii = 1, nx
+        	diff = abs(tt(ii,jj) - tt_old(ii,jj))
+        	if (diff > diff_max) then
+           		diff_max = diff
+       		end if
+     	   end do
+        end do
+  
+     ! VERIFICAR CRITERIO DE CONVERGENCIA
+        if (diff_max < tol) then
+              write(*,*) 'Convergencia en la iteración = ', iter
+              write(*,*) 'Diferencia máxima = ', diff_max
+         exit bucle_iteraciones
+        end if
+  
   end do bucle_iteraciones
   !
   do jj = 1, ny
