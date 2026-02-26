@@ -7,7 +7,7 @@ Program Calor2D
   ! Iteradores y tamaño del problema
   !
   integer :: ii, jj, iter
-  integer, parameter :: nx = 60, ny = 30, itermax=100
+  integer, parameter :: nx = 60, ny = 30
   !
   ! Variables del dominio computacional
   !
@@ -15,7 +15,7 @@ Program Calor2D
   !
   ! Variables del problema fisico
   !
-  double precision :: xx(nx), yy(ny)  ! variables de la malla
+  !double precision :: xx(nx), yy(ny)  ! variables de la malla
   double precision :: tt(nx,ny)       ! vector de incognitas
   double precision :: tx(nx), ty(ny)  ! vectores de incognitas 1D
   double precision :: rx(nx),ry(ny)   ! vector de resultados del s. ecuaciones
@@ -26,6 +26,12 @@ Program Calor2D
   !
   double precision :: ay(ny), by(ny), cy(ny) ! Variables para almacenar
   !                                          ! matriz tridiagonal sobredimensionada
+  !!
+  !! Variables para criterio de convergencia por norma euclidiana
+  !!
+  double precision :: tt_old(nx,ny)             !! copia de tt antes de cada iteracion
+  double precision :: norma                      !! norma euclidiana ||tt_nuevo - tt_viejo||_2
+  double precision, parameter :: error = 1.d-5  !! tolerancia: el bucle termina cuando norma < error
   !  
   ! Dominio computacional
   !
@@ -60,8 +66,15 @@ Program Calor2D
      cfy(jj,1) = 1.d0
      cfy(jj,2) = 0.d0
   end do
-  !
-  bucle_iteraciones: do iter = 1, itermax
+  !!
+  iter  = 0            !! inicializar contador de iteraciones
+  norma = huge(1.d0)  !! valor inicial grande para entrar al do while la primera vez
+  !!
+  bucle_iteraciones: do while (norma >= error)
+     !!
+     iter   = iter + 1  !! incrementar contador de iteraciones
+     tt_old = tt         !! guardar estado anterior de tt antes de los barridos
+     !!
 
      barrido_y: do jj = 2, ny-1
 
@@ -137,8 +150,14 @@ Program Calor2D
         end do
         !
      end do barrido_x
-     !
+     !!
+     norma = sqrt(sum((tt - tt_old)**2))               !! norma euclidiana de la diferencia entre iteraciones
+     write(*,*) 'Iteracion:', iter, '  norma:', norma  !! imprimir progreso en pantalla
+     !!
   end do bucle_iteraciones
+  !!
+  write(*,*) 'Convergencia alcanzada en', iter, 'iteraciones, norma final:', norma  !! resumen al terminar
+  !!
   !
   do jj = 1, ny
      do ii = 1, nx
