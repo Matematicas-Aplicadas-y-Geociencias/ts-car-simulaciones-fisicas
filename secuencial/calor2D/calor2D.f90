@@ -7,16 +7,18 @@ Program Calor2D
   ! Iteradores y tamaño del problema
   !
   integer :: ii, jj, iter
-  integer, parameter :: nx = 60, ny = 30, itermax=100
+  integer, parameter :: nx = 60, ny = 30 !, itermax=1000
   !
   ! Variables del dominio computacional
   !
-  double precision :: lx, ly, deltax, deltay
+  double precision :: lx, ly, deltax, deltay, max_value_dif
   !
   ! Variables del problema fisico
   !
   double precision :: xx(nx), yy(ny)  ! variables de la malla
   double precision :: tt(nx,ny)       ! vector de incognitas
+  double precision :: ct(nx,ny)       ! copia del vector de incognnitas
+  double precision :: uu(nx,ny)		  ! Diferencia entre tt y ct
   double precision :: tx(nx), ty(ny)  ! vectores de incognitas 1D
   double precision :: rx(nx),ry(ny)   ! vector de resultados del s. ecuaciones
   double precision :: cfx(ny,2),cfy(nx,2) ! vector de condiciones de frontera
@@ -33,6 +35,7 @@ Program Calor2D
   deltax  = lx/nx
   ly      = 5.d0
   deltay  = ly/ny
+  max_value_dif = 0.d0 ! Esta variable será la el maximo de la diferencia
   !
   ! Inicializacion de variables
   !
@@ -46,6 +49,8 @@ Program Calor2D
   cy(:)   = 0.d0
   ry(:)   = 0.d0
   tt(:,:) = 0.d0
+  ct(:,:) = 0.d0
+  uu(:,:) = 0.d0
   !
   ! Condiciones de frontera en direcci'on x
   !
@@ -57,12 +62,15 @@ Program Calor2D
   ! Condiciones de frontera en direcci'on y
   !
   do jj = 1, nx
-     cfy(jj,1) = 1.d0
+     cfy(jj,1) = 0.d0
      cfy(jj,2) = 0.d0
   end do
   !
-  bucle_iteraciones: do iter = 1, itermax
-
+  bucle_iteraciones: do while(1 == 1)
+  !bucle_iteraciones: do iter = 1, itermax
+     !
+     ct(:,:) = tt(:,:)
+     !
      barrido_y: do jj = 2, ny-1
 
         ensambla_tri_x: do ii = 2, nx-1
@@ -118,7 +126,7 @@ Program Calor2D
         cy(1)     = 0.d0
         ry(1)     = cfy(ii,1)
         !
-        ay(ny)    =-1.d0 
+        ay(ny)    = -1.d0 
         by(ny)    = 1.d0
         cy(ny)    = 0.d0 ! no se usa en los c'alculos
         ry(ny)    = cfy(ii,2)
@@ -138,6 +146,16 @@ Program Calor2D
         !
      end do barrido_x
      !
+     !
+     !Criterio de convergencia
+     uu = tt - ct
+     !
+     uu = uu * uu
+     max_value_dif = maxval(uu)
+     if(max_value_dif < 1E-10) exit
+     
+     
+  !end do bucle_iteraciones
   end do bucle_iteraciones
   !
   do jj = 1, ny
