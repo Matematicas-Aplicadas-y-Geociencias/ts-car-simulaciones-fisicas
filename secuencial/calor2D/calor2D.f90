@@ -7,7 +7,7 @@ Program Calor2D
   ! Iteradores y tamaño del problema
   !
   integer :: ii, jj, iter, i, j
-  integer, parameter :: nx = 60, ny = 30, itermax=1e4
+  integer, parameter :: nx = 100, ny = 100, itermax=1e4
   !
   ! Variables del dominio computacional
   !
