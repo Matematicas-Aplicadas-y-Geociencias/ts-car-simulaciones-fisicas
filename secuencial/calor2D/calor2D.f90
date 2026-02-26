@@ -6,7 +6,7 @@ Program Calor2D
   !
   ! Iteradores y tamaño del problema
   !
-  integer :: ii, jj, iter
+  integer :: ii, jj, iter, i, j
   integer, parameter :: nx = 60, ny = 30, itermax=1e4
   !
   ! Variables del dominio computacional
@@ -27,7 +27,7 @@ Program Calor2D
   double precision :: ay(ny), by(ny), cy(ny) ! Variables para almacenar
   !                                          ! matriz tridiagonal sobredimensionada
   !  
-  double precision :: suma_old, suma_new, diff_norm
+  double precision :: diff_norm
   double precision :: tt_old(nx,ny)
   double precision :: tol
   ! Dominio computacional
@@ -148,15 +148,19 @@ Program Calor2D
      !
      ! Criterio de convergencia
      !
-     suma_old = sum(tt)
-     suma_new = sum(tt_old)
-     !
-     diff_norm = abs(suma_new - suma_old)
-     !
-     convergencia: if (diff_norm < tol) then
-         write(*, *) '#Iteraciones: ', iter
+     ! 
+     diff_norm = 0.0d0
+     do jj = 1, ny
+        do ii = 1, nx
+            diff_norm = diff_norm + ((tt(ii,jj) - tt_old(ii,jj))**2)
+        end do
+      end do
+      diff_norm = sqrt(diff_norm/(nx*ny))
+      convergencia: if (diff_norm < tol) then
+         write(*,*) '# Iteraciones: ', iter
          exit bucle_iteraciones
-     end if convergencia
+      end if convergencia
+
 
   end do bucle_iteraciones
   !
