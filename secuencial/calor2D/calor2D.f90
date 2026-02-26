@@ -13,10 +13,14 @@ Program Calor2D
   !
   double precision :: lx, ly, deltax, deltay
   !
+  ! Variable para el residuo de iteraciones, y tolerancia
+  !
+  double precision :: residuo, tolerancia
+  !
   ! Variables del problema fisico
   !
   double precision :: xx(nx), yy(ny)  ! variables de la malla
-  double precision :: tt(nx,ny)       ! vector de incognitas
+  double precision :: tt(nx,ny,2)     ! vector de incognitas, 1 para la iteraci'on actual y 2 para la anterior
   double precision :: tx(nx), ty(ny)  ! vectores de incognitas 1D
   double precision :: rx(nx),ry(ny)   ! vector de resultados del s. ecuaciones
   double precision :: cfx(ny,2),cfy(nx,2) ! vector de condiciones de frontera
@@ -26,7 +30,11 @@ Program Calor2D
   !
   double precision :: ay(ny), by(ny), cy(ny) ! Variables para almacenar
   !                                          ! matriz tridiagonal sobredimensionada
-  !  
+  !
+  ! Tolerancia
+  !
+  tolerancia = 1d-3
+  !
   ! Dominio computacional
   !
   lx      = 10.d0
@@ -45,7 +53,7 @@ Program Calor2D
   by(:)   = 0.d0
   cy(:)   = 0.d0
   ry(:)   = 0.d0
-  tt(:,:) = 0.d0
+  tt(:,:,:) = 0.d0
   !
   ! Condiciones de frontera en direcci'on x
   !
@@ -62,7 +70,11 @@ Program Calor2D
   end do
   !
   bucle_iteraciones: do iter = 1, itermax
-
+     !
+     ! Inicializamos el valor de la iteraci'on anterior
+     !
+     tt(:,:,2) = tt(:,:,1)
+     !
      barrido_y: do jj = 2, ny-1
 
         ensambla_tri_x: do ii = 2, nx-1
@@ -70,7 +82,7 @@ Program Calor2D
            ax(ii) = 1.d0/(deltax*deltax)
            bx(ii) =-2.d0*(1.d0/(deltax*deltax)+ 1.d0/(deltay*deltay))
            cx(ii) = 1.d0/(deltax*deltax)
-           rx(ii) =-1.d0/(deltay*deltay)*tt(ii,jj-1)-1.d0/(deltay*deltay)*tt(ii,jj+1)
+           rx(ii) =-1.d0/(deltay*deltay)*tt(ii,jj-1,1)-1.d0/(deltay*deltay)*tt(ii,jj+1,1)
            
         end do ensambla_tri_x
         !
@@ -94,7 +106,7 @@ Program Calor2D
         !
         do ii = 1, nx
            
-           tt(ii,jj) = tx(ii)
+           tt(ii,jj,1) = tx(ii)
            
         end do
         !
@@ -107,7 +119,7 @@ Program Calor2D
            ay(jj) = 1.d0/(deltay*deltay)
            by(jj) =-2.d0*(1.d0/(deltax*deltax)+ 1.d0/(deltay*deltay))
            cy(jj) = 1.d0/(deltay*deltay)
-           ry(jj) =-1.d0/(deltax*deltax)*tt(ii-1,jj)-1.d0/(deltax*deltax)*tt(ii+1,jj)
+           ry(jj) =-1.d0/(deltax*deltax)*tt(ii-1,jj,1)-1.d0/(deltax*deltax)*tt(ii+1,jj,1)
            
         end do ensambla_tri_y
         !
@@ -132,7 +144,7 @@ Program Calor2D
         !
         do jj = 1, ny
            
-           tt(ii,jj) = ty(jj)
+           tt(ii,jj,1) = ty(jj)
            
         end do
         !
@@ -140,13 +152,25 @@ Program Calor2D
      !
      ! Criterio de convergencia
      !
-     ! Condicional que si se cumple exit
+     residuo = 0.d0
+     do ii = 1, nx
+        do jj = 1, ny
+           residuo = residuo + (tt(ii,jj,1)-tt(ii,jj,2))*(tt(ii,jj,1)-tt(ii,jj,2))
+        end do
+     end do
+     !
+     residuo = sqrt(residuo)
+     !
+     ! write(*,*) "DEBUG: ", iter, residuo
+     !
+     if( residuo < tolerancia )exit
      !
   end do bucle_iteraciones
+  write(*,*) "Convergencia en ", iter, " iteraciones"
   !
   do jj = 1, ny
      do ii = 1, nx
-        write(*,*) (ii-1)*deltax, (jj-1)*deltay, tt(ii,jj)
+        write(*,*) (ii-1)*deltax, (jj-1)*deltay, tt(ii,jj,1)
      end do
      write(*,*) ' '
   end do
