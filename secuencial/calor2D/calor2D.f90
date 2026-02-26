@@ -7,7 +7,7 @@ Program Calor2D
   ! Iteradores y tamaño del problema
   !
   integer :: ii, jj, iter
-  integer, parameter :: nx = 60, ny = 30, itermax=100
+  integer, parameter :: nx = 60, ny = 30, itermax=10000
   !
   ! Variables del dominio computacional
   !
@@ -57,7 +57,7 @@ Program Calor2D
   ! Condiciones de frontera en direcci'on y
   !
   do jj = 1, nx
-     cfy(jj,1) = 1.d0
+     cfy(jj,1) = 0.d0
      cfy(jj,2) = 0.d0
   end do
   !
@@ -114,8 +114,8 @@ Program Calor2D
         ! Impone cond. frontera
         !
         ay(1)     = 0.d0 ! no se usa en los c'alculos
-        by(1)     = 1.d0
-        cy(1)     = 0.d0
+        by(1)     =-1.d0
+        cy(1)     = 1.d0
         ry(1)     = cfy(ii,1)
         !
         ay(ny)    =-1.d0 
@@ -137,6 +137,10 @@ Program Calor2D
         end do
         !
      end do barrido_x
+     !
+     ! Criterio de convergencia
+     !
+     ! Condicional que si se cumple exit
      !
   end do bucle_iteraciones
   !
