@@ -171,7 +171,7 @@ Program Calor2D
   !end do
   !
 
-   open(unit=10, file="solucion.dat")
+   open(unit=10, file="soln.dat")
 
    do jj = 1, ny
        do ii = 1, nx
