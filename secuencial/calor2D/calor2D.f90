@@ -7,7 +7,7 @@ Program Calor2D
   ! Iteradores y tamaño del problema
   !
   integer :: ii, jj, iter
-  integer, parameter :: nx = 60, ny = 30, itermax=100
+  integer, parameter :: nx = 60, ny = 30, itermax=1000000
   !
   ! Variables del dominio computacional
   !
@@ -25,6 +25,8 @@ Program Calor2D
   !                                          ! matriz tridiagonal sobredimensionada
   !
   double precision :: ay(ny), by(ny), cy(ny) ! Variables para almacenar
+  double precision :: tt_old(nx,ny)
+  double precision :: error, tol
   !                                          ! matriz tridiagonal sobredimensionada
   !  
   ! Dominio computacional
@@ -46,6 +48,7 @@ Program Calor2D
   cy(:)   = 0.d0
   ry(:)   = 0.d0
   tt(:,:) = 0.d0
+  tol = 1.d-6
   !
   ! Condiciones de frontera en direcci'on x
   !
@@ -57,12 +60,14 @@ Program Calor2D
   ! Condiciones de frontera en direcci'on y
   !
   do jj = 1, nx
-     cfy(jj,1) = 1.d0
+     cfy(jj,1) = 0.d0
      cfy(jj,2) = 0.d0
   end do
   !
   bucle_iteraciones: do iter = 1, itermax
-
+!ok guarda los parametros computados hasta el momento y vuelve a computarlos.
+!el primero es un cero total
+     tt_old(:,:) = tt(:,:)
      barrido_y: do jj = 2, ny-1
 
         ensambla_tri_x: do ii = 2, nx-1
@@ -138,6 +143,15 @@ Program Calor2D
         !
      end do barrido_x
      !
+     !aqui
+     error = maxval(abs(tt - tt_old))
+     write(101,*) iter, error 
+     if (error < tol) then
+        write(*,*) 'Error = ', error
+        write(*,*) 'Numero total de interacciones: ', iter
+        exit bucle_iteraciones
+     end if
+
   end do bucle_iteraciones
   !
   do jj = 1, ny
@@ -146,5 +160,6 @@ Program Calor2D
      end do
      write(*,*) ' '
   end do
+  flush(101)
   !
 end Program Calor2D
