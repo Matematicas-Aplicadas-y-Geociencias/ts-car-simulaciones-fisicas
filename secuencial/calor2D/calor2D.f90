@@ -7,7 +7,7 @@ Program Calor2D
   ! Iteradores y tamaño del problema
   !
   integer :: ii, jj, iter
-  integer, parameter :: nx = 60, ny = 30, itermax=100
+  integer, parameter :: nx = 60, ny = 30, itermax=500
   !
   ! Variables del dominio computacional
   !
@@ -17,6 +17,8 @@ Program Calor2D
   !
   double precision :: xx(nx), yy(ny)  ! variables de la malla
   double precision :: tt(nx,ny)       ! vector de incognitas
+  double precision :: tt_old(nx,ny)   ! Vector antiguo de temperaturas 
+  double precision :: tol, maxdiff, diff ! Tolerancias para cálculo de umbral
   double precision :: tx(nx), ty(ny)  ! vectores de incognitas 1D
   double precision :: rx(nx),ry(ny)   ! vector de resultados del s. ecuaciones
   double precision :: cfx(ny,2),cfy(nx,2) ! vector de condiciones de frontera
@@ -47,6 +49,11 @@ Program Calor2D
   ry(:)   = 0.d0
   tt(:,:) = 0.d0
   !
+  ! Definiendo la Tolerancia
+  tol = 1.0d-4
+  maxdiff = 1.0d0
+  iter = 0
+  !
   ! Condiciones de frontera en direcci'on x
   !
   do ii = 1, ny
@@ -61,7 +68,9 @@ Program Calor2D
      cfy(jj,2) = 0.d0
   end do
   !
-  bucle_iteraciones: do iter = 1, itermax
+  bucle_iteraciones: do while (maxdiff > tol .and. iter < itermax)
+      iter = iter + 1
+      tt_old(:,:) = tt(:,:)
 
      barrido_y: do jj = 2, ny-1
 
@@ -138,13 +147,38 @@ Program Calor2D
         !
      end do barrido_x
      !
+     maxdiff = 0.0d0
+      do jj = 1, ny
+         do ii = 1, nx
+            diff = abs(tt(ii,jj) - tt_old(ii,jj))
+            if (diff > maxdiff) maxdiff = diff
+         end do
+      end do
   end do bucle_iteraciones
+
+   if (maxdiff <= tol) then
+      write(*,*) "Convergio: iter=", iter, " maxdiff=", maxdiff
+   else
+      write(*,*) "NO convergio: itermax alcanzado. iter=", iter, " maxdiff=", maxdiff
+   end if
+
   !
-  do jj = 1, ny
-     do ii = 1, nx
-        write(*,*) (ii-1)*deltax, (jj-1)*deltay, tt(ii,jj)
-     end do
-     write(*,*) ' '
-  end do
+  !do jj = 1, ny
+   !  do ii = 1, nx
+    !    write(*,*) (ii-1)*deltax, (jj-1)*deltay, tt(ii,jj)
+     !end do
+     !write(*,*) ' '
+  !end do
   !
+
+   open(unit=10, file="solucion.dat", status="replace")
+
+   do jj = 1, ny
+       do ii = 1, nx
+           write(10,*) ii, jj, tt(ii,jj)
+      end do
+   end do
+
+   close(10)
+
 end Program Calor2D
