@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib
-matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
+matplotlib.use("TkAgg")
+
 
 data = np.loadtxt("solucion.dat")
 
@@ -21,7 +22,3 @@ plt.title("Distribución de temperatura")
 plt.xlabel("x")
 plt.ylabel("y")
 plt.show()
-
-plt.tight_layout()
-plt.savefig("malla.png", dpi=300)
-print("Guardado: malla.png")
