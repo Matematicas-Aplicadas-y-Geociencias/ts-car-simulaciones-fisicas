@@ -151,7 +151,13 @@ Program Calor2D
         !
      end do barrido_x
      !!
-     norma = sqrt(sum((tt - tt_old)**2))               !! norma euclidiana de la diferencia entre iteraciones
+     norma = 0.d0
+     do ii = 1, nx
+        do jj = 1, ny
+           norma = norma + (tt(ii,jj) - tt_old(ii,jj))**2
+        end do
+     end do
+     norma = sqrt(norma)  !! norma euclidiana de la diferencia entre iteraciones
      write(*,*) 'Iteracion:', iter, '  norma:', norma  !! imprimir progreso en pantalla
      !!
   end do bucle_iteraciones
