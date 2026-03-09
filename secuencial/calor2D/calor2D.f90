@@ -95,7 +95,7 @@ Program Calor2D
         rx(1)     = cfx(jj,1)
         !
         ax(nx)    = 0.d0 
-        bx(nx)    = 1.d0
+        bx(nx)    = 2.d0
         cx(nx)    = 0.d0 ! no se usa en los c'alculos
         rx(nx)    = cfx(jj,2)
         !
