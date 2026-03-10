@@ -3,16 +3,14 @@ program ids_a_n
   implicit none
   integer :: N, tid, S
 
-  N = 12
-  S = 0
+  N = 13 ! N'umero N para sumar
+  S = 0 ! Suma inicializada a 0
 
-  !$omp parallel private(tid) shared(N,S)
-    tid = omp_get_thread_num()   ! 0..T-1
-
-      !$omp atomic
-      S = S + (tid + 1)
-
+  ! num_threads(N) hace que el número de hilos sea igual a N
+  !$omp parallel private(tid) reduction(+:S) num_threads(N)
+    tid = omp_get_thread_num()
+    S = tid + 1
   !$omp end parallel
 
   print *, "Suma =", S
-end program
+end program ids_a_n
