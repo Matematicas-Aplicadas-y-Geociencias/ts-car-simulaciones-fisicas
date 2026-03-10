@@ -5,10 +5,10 @@ program suma_openmp
   integer(8) :: N, inicio, fin, local, S, chunk, residuo, i
   integer :: id_thread, nthreads
 
-  N = 200
+  N = 10 
   S = 0
 
-  !$omp parallel private(id_thread,nthreads,inicio,fin,local,chunk,residuoa,i) shared(N,S)
+  !$omp parallel private(id_thread,nthreads,inicio,fin,local,chunk,residuo,i) shared(N,S)
     id_thread = omp_get_thread_num()
     nthreads  = omp_get_num_threads()
 
