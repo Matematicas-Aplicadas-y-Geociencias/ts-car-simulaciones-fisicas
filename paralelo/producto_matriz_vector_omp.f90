@@ -1,7 +1,7 @@
 program producto_matriz_vector_omp
     use omp_lib
     implicit none
-    integer :: i, j, n, m
+    integer :: ii, jj, n, m
     real(8), allocatable :: a(:), B(:,:), y(:)
     real(8) :: suma
 
@@ -11,21 +11,21 @@ program producto_matriz_vector_omp
 
     ! Se crea arreglo a con valores 1, 2, ..., n
     !$omp parallel do
-    do i = 1, n
-        a(i) = i  ! a = [1, 2, ..., n]
+    do ii = 1, n
+        a(ii) = ii  ! a = [1, 2, ..., n]
     end do
     !$omp end parallel do
     B = 3.0d0
     y = 0.0d0
 
     ! Producto matriz-vector: y = B^T * a
-    !$omp parallel do private(i, suma)
-    do j = 1, m
+    !$omp parallel do private(ii, suma) shared(y)
+    do jj = 1, m
         suma = 0.0d0
-        do i = 1, n
-            suma = suma + a(i) * B(i,j)
+        do ii = 1, n
+            suma = suma + a(ii) * B(ii,jj)
         end do
-        y(j) = suma
+        y(jj) = suma
     end do
     !$omp end parallel do
 
