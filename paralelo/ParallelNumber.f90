@@ -1,9 +1,21 @@
 program ids_a_n
+  
   use omp_lib
+  
   implicit none
-  integer :: N, tid, S
+  integer :: N, S, i, tid
+  
 
+  ! Programa para sumar de 1 a N secuencialmente
   N = 13 ! N'umero N para sumar
+  S = 0
+  do i = 1, N
+    S = S + i
+  end do
+  print *, "Suma =", S
+
+  ! Programa para sumar de 1 a N utilizando OpenMP
+  
   S = 0 ! Suma inicializada a 0
 
   ! num_threads(N) hace que el número de hilos sea igual a N
