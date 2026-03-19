@@ -13,7 +13,7 @@ Program suma_paralela
   ! Abrimos una regi\'on paralela donde el identificador de hilo ser'a privado
   ! y se realizar'a la suma de los primeros N n\'umeros usando un bucle paralelizado
   !
-  !$omp parallel private(id_thread) reduction(+:suma)
+  !$omp parallel private(id_thread) reduction(+:suma) default(none)
   !
   id_thread = omp_get_thread_num()
   ! write(*, *) "id_thread: ", id_thread
