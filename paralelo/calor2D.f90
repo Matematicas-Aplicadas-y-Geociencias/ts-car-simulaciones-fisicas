@@ -77,6 +77,7 @@ Program Calor2D
      !
      barrido_y: do jj = 2, ny-1
 
+        !$omp parallel do default(none) shared(ax,bx,cx,rx,tt,jj,deltax,deltay)
         ensambla_tri_x: do ii = 2, nx-1
 
            ax(ii) = 1.d0/(deltax*deltax)
@@ -85,6 +86,7 @@ Program Calor2D
            rx(ii) =-1.d0/(deltay*deltay)*tt(ii,jj-1,1)-1.d0/(deltay*deltay)*tt(ii,jj+1,1)
            
         end do ensambla_tri_x
+        !$omp end parallel do
         !
         ! Impone cond. frontera
         !
