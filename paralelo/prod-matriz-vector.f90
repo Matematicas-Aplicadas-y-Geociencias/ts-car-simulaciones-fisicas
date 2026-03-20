@@ -1,7 +1,7 @@
 Program matriz_vector
 use omp_lib
 implicit none
-integer :: suma, id_thread
+integer :: id_thread
 integer :: ii, jj
 integer, parameter :: N = 2
 real :: A(N,N)
