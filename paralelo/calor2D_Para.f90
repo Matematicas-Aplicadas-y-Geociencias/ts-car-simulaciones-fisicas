@@ -56,24 +56,21 @@ Program Calor2D
   tt(:,:,:) = 0.d0
   !
   ! Condiciones de frontera en direcci'on x
-  !$omp parallel shared(cfx,cfy) default(none)
-  !$omp do
+
   do ii = 1, ny
      cfx(ii,1) = 1.d0
      cfx(ii,2) = 0.d0
   end do
-  !$omp end do
+
   !
   ! Condiciones de frontera en direcci'on y
   !
-  !$omp do
+
   do jj = 1, nx
      cfy(jj,1) = 0.d0
      cfy(jj,2) = 0.d0
   end do
-  !$omp end do
-  !
-  !$omp end parallel
+
   bucle_iteraciones: do iter = 1, itermax
      !
      ! Inicializamos el valor de la iteraci'on anterior
