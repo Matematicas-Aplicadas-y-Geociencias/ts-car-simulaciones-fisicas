@@ -56,7 +56,7 @@ Program Calor2D
   tt(:,:,:) = 0.d0
   !
   ! Condiciones de frontera en direcci'on x
-
+  ! Estos núcleos pueden paralelizarse, sin embargo, es tan poco el trabajo repartido que ano compensa la apertura y repartición en hilo
   do ii = 1, ny
      cfx(ii,1) = 1.d0
      cfx(ii,2) = 0.d0
@@ -181,7 +181,7 @@ Program Calor2D
      residuo = sqrt(residuo)
      !
      ! write(*,*) "DEBUG: ", iter, residuo
-     !
+     ! para escribir archivos de forma paralela se pueden utilizar herramientas adicionales para generar la escritura sin tener problemas. 
      if( residuo < tolerancia )exit
      !
   end do bucle_iteraciones
