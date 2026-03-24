@@ -18,12 +18,12 @@ program suma_sec
   id_thread = omp_get_thread_num()
   
   !Se abre un bucle paralelo, donde los indices repetidos son privados por defecto, pero no los declaramos explicitamente (se encarga OpenMP). El número de iteraciones se reparte de la forma más equitativa posible entre los hilos.
-  !$omp do
+ 
     do i = 1,64
     	suma =suma +i
     	print*, "El índice es i=",i,"desde el hilo", id_thread
     end do
-    !$omp end do
+
         print*, "El resultado de la suma en paralelo es:", suma, "desde el hilo", id_thread
  !Cerramos la región paralela 
  !$omp end parallel

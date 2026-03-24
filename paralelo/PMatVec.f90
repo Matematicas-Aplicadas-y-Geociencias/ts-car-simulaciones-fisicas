@@ -22,7 +22,7 @@ program prod_mar_vec
     
     r=0
     
-  !$omp parallel private(id_thread) shared(r,a,b)
+  !$omp parallel private(id_thread) shared(r,a,b) default(none)
    id_thread = omp_get_thread_num()
    
   !$omp do
