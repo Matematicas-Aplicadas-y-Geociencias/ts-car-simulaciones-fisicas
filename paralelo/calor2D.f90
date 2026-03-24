@@ -59,6 +59,10 @@ Program Calor2D
   !
   ! Condiciones de frontera en direcci'on x
   !
+  ! Estos bucles pueden paralelizarse, pero hay que valorar bien la cantidad
+  ! de trabajo que se va a compartir respecto al tiempo necesario para abrir
+  ! los hilos paralelos.
+  !
   do ii = 1, ny
      cfx(ii,1) = 1.d0
      cfx(ii,2) = 0.d0
@@ -67,7 +71,7 @@ Program Calor2D
   ! Condiciones de frontera en direcci'on y
   !
   do jj = 1, nx
-     cfy(jj,1) = 0.d0
+     cfy(jj,1) = 1.d0
      cfy(jj,2) = 0.d0
   end do
   !
@@ -77,23 +81,30 @@ Program Calor2D
      !
      tt(:,:,2) = tt(:,:,1)
      !
+     !---------------------------------------------------------------
+     !
+     ! Paralelizamos el barrido en la direcci'on y en bandas
+     ! compuestas por grupos de l'ineas, observamos que si usamos pocas
+     ! l'ineas tenemos una aceleraci'on pobre o ausente
+     !
+     !$omp parallel do default(none) &
+     !$omp shared(  deltax, deltay, tt, cfx) &
+     !$omp private( ax, bx, cx, rx, tx, ii )
      barrido_y: do jj = 2, ny-1
         !
         ! Es posible combinar directivas de openmp, por ejemplo,
         ! si necesitamos una regi'on paralela unicamente para un bucle,
         ! podemos combinar "parallel" con "do"
         !
-        ! $omp parallel do default(none)                        &
-        ! $omp shared( ax, bx, cx, rx, deltax, deltay, tt, jj )
         ensambla_tri_x: do ii = 2, nx-1
 
            ax(ii) = 1.d0/(deltax*deltax)
            bx(ii) =-2.d0*(1.d0/(deltax*deltax)+ 1.d0/(deltay*deltay))
            cx(ii) = 1.d0/(deltax*deltax)
-           rx(ii) =-1.d0/(deltay*deltay)*tt(ii,jj-1,1)-1.d0/(deltay*deltay)*tt(ii,jj+1,1)
+           rx(ii) =-1.d0/(deltay*deltay)*tt(ii,jj-1,1)-1.d0/(deltay*deltay)&
+                & * tt(ii,jj+1,1)
            
         end do ensambla_tri_x
-        ! $omp end parallel do
         !
         ! Es necesario cerrar el parallel do de esta forma.
         !
@@ -122,7 +133,17 @@ Program Calor2D
         end do
         !
      end do barrido_y
-
+     !$omp end parallel do
+     !
+     !---------------------------------------------------------------
+     !
+     ! Paralelizamos el barrido en la direcci'on x en bandas
+     ! compuestas por grupos de l'ineas, observamos que si usamos pocas
+     ! l'ineas tenemos una aceleraci'on pobre o ausente
+     !
+     !$omp parallel do default(none) &
+     !$omp shared(  deltax, deltay, tt, cfy) &
+     !$omp private( ay, by, cy, ry, ty )
      barrido_x: do ii = 2, nx-1
 
         ensambla_tri_y: do jj = 2, ny-1
@@ -130,15 +151,16 @@ Program Calor2D
            ay(jj) = 1.d0/(deltay*deltay)
            by(jj) =-2.d0*(1.d0/(deltax*deltax)+ 1.d0/(deltay*deltay))
            cy(jj) = 1.d0/(deltay*deltay)
-           ry(jj) =-1.d0/(deltax*deltax)*tt(ii-1,jj,1)-1.d0/(deltax*deltax)*tt(ii+1,jj,1)
+           ry(jj) =-1.d0/(deltax*deltax)*tt(ii-1,jj,1)-1.d0/(deltax*deltax)*&
+                tt(ii+1,jj,1)
            
         end do ensambla_tri_y
         !
         ! Impone cond. frontera
         !
         ay(1)     = 0.d0 ! no se usa en los c'alculos
-        by(1)     =-1.d0
-        cy(1)     = 1.d0
+        by(1)     = 1.d0
+        cy(1)     = 0.d0
         ry(1)     = cfy(ii,1)
         !
         ay(ny)    =-1.d0 
@@ -160,6 +182,7 @@ Program Calor2D
         end do
         !
      end do barrido_x
+     !$omp end parallel do
      !
      ! Criterio de convergencia
      !
@@ -179,6 +202,9 @@ Program Calor2D
   end do bucle_iteraciones
   write(*,*) "Convergencia en ", iter, " iteraciones"
   !
+  ! Aunque es muy tentador, no podemos paralelizar este bucle,
+  ! el archivo queda desordenado y gnuplot (y otros graficadores) no
+  ! los procesan bien.
   do jj = 1, ny
      do ii = 1, nx
         write(*,*) (ii-1)*deltax, (jj-1)*deltay, tt(ii,jj,1)
