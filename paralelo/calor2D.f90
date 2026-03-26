@@ -15,7 +15,8 @@ Program Calor2D
   !
   ! Variable para el residuo de iteraciones, y tolerancia
   !
-  double precision :: residuo, tolerancia
+   double precision :: residuo_esc, tolerancia
+   double precision :: residuo(nx,ny)
 
   ! Variables del problema fisico
   !
@@ -160,22 +161,21 @@ Program Calor2D
      !
      ! Criterio de convergencia
      !
-     residuo = 0.d0
-     !$omp parallel do default(none) shared(tt) private(ii,jj) reduction(+:residuo)
+     residuo_esc = 0.d0
+     !$omp parallel do default(none) shared(tt) private(ii,jj) reduction(+:residuo_esc)
      do ii = 1, nx
         do jj = 1, ny
-           residuo = residuo + (tt(ii,jj,1)-tt(ii,jj,2))*(tt(ii,jj,1)-tt(ii,jj,2))
+           residuo_esc = residuo_esc + (tt(ii,jj,1)-tt(ii,jj,2))**2
         end do
      end do
      !$omp end parallel do
-     !
-     residuo = sqrt(residuo)
+     residuo_esc = sqrt(residuo_esc)
 
      call residue(tt(:,:,1), nx, ny, deltax, deltay, residuo)
      !
-     ! write(*,*) "DEBUG: ", iter, residuo
+     ! write(*,*) "DEBUG: ", iter, residuo_esc
      !
-     if( residuo < tolerancia )exit
+     if( residuo_esc < tolerancia )exit
      !
   end do bucle_iteraciones
   write(*,*) "Convergencia en ", iter, " iteraciones"
