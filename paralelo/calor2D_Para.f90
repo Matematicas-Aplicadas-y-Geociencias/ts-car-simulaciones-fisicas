@@ -70,7 +70,7 @@ Program Calor2D
      cfy(jj,1) = 0.d0
      cfy(jj,2) = 0.d0
   end do
-
+! El bucle iterativo debe tener una solución clara, y evitar que ande dando vueltas innecesariamente.
   bucle_iteraciones: do iter = 1, itermax
      !
      ! Inicializamos el valor de la iteraci'on anterior
@@ -185,6 +185,7 @@ Program Calor2D
      if( residuo < tolerancia )exit
      !
   end do bucle_iteraciones
+  call verify_zero(tt,deltax,deltay,tolerancia)
   write(*,*) "Convergencia en ", iter, " iteraciones"
   !
   do jj = 1, ny
