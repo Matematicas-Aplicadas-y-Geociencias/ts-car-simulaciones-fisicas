@@ -73,8 +73,9 @@ Program Calor2D
      ct(:,:) = tt(:,:)
 	 !
 	 !
+	 !$omp parallel do default(none) private(ax,bx,cx,rx,tx) shared(deltay,deltax,cfx,tt)
      barrido_y: do jj = 2, ny-1
-		!$omp parallel do default(none) shared(ax,bx,cx,rx,deltax,deltay,jj,tt)
+		! $omp parallel do default(none) shared(ax,bx,cx,rx,deltax,deltay,jj,tt)
         ensambla_tri_x: do ii = 2, nx-1
 
            ax(ii) = 1.d0/(deltax*deltax)
@@ -83,7 +84,7 @@ Program Calor2D
            rx(ii) =-1.d0/(deltay*deltay)*tt(ii,jj-1)-1.d0/(deltay*deltay)*tt(ii,jj+1)
            
         end do ensambla_tri_x
-        !$omp end parallel do
+        ! $omp end parallel do
         !
         ! Impone cond. frontera
         !
@@ -110,11 +111,12 @@ Program Calor2D
         end do
         !
      end do barrido_y
+     !$omp end parallel do
 
      
-	     
+	 !$omp parallel do default(none) private(ay,by,cy,ry,ty) shared(deltay,deltax,cfy,tt)    
      barrido_x: do ii = 2, nx-1
-		!$omp parallel do default(none) shared(ay,by,cy,ry,tt,deltax,deltay,ii)
+		! $omp parallel do default(none) shared(ay,by,cy,ry,tt,deltax,deltay,ii)
         ensambla_tri_y: do jj = 2, ny-1
 
            ay(jj) = 1.d0/(deltay*deltay)
@@ -123,7 +125,7 @@ Program Calor2D
            ry(jj) =-1.d0/(deltax*deltax)*tt(ii-1,jj)-1.d0/(deltax*deltax)*tt(ii+1,jj)
            
         end do ensambla_tri_y
-       !$omp end parallel do
+        ! $omp end parallel do
         !
         ! Impone cond. frontera
         !
@@ -151,7 +153,7 @@ Program Calor2D
         end do
         !
      end do barrido_x
-      
+     !$omp end parallel do
      !
      !
      !Criterio de convergencia
