@@ -16,7 +16,7 @@ Program Calor2D
   ! Variable para el residuo de iteraciones, y tolerancia
   !
   double precision :: residuo, tolerancia
-  !
+
   ! Variables del problema fisico
   !
   double precision :: xx(nx), yy(ny)  ! variables de la malla
@@ -75,18 +75,22 @@ Program Calor2D
      !
      tt(:,:,2) = tt(:,:,1)
      !
-     barrido_y: do jj = 2, ny-1
-
-        !$omp parallel do default(none) shared(ax,bx,cx,rx,tt,jj,deltax,deltay)
+   !$omp parallel do private(ii,ax,bx,cx,rx,tx) shared(tt,cfx,deltax,deltay)
+   barrido_y: do jj = 2, ny-1
+     ! Es posible combinar directivas de openmp, por ejemplo,
+     ! si necesitamos una regi'on paralela 'unicamente para un bucle,
+     ! podemos cambiar 'parallel' con 'do'
+     !
+        ! $omp parallel do default(none) shared(ax,bx,cx,rx,tt,jj,deltax,deltay)
         ensambla_tri_x: do ii = 2, nx-1
 
            ax(ii) = 1.d0/(deltax*deltax)
            bx(ii) =-2.d0*(1.d0/(deltax*deltax)+ 1.d0/(deltay*deltay))
            cx(ii) = 1.d0/(deltax*deltax)
-           rx(ii) =-1.d0/(deltay*deltay)*tt(ii,jj-1,1)-1.d0/(deltay*deltay)*tt(ii,jj+1,1)
+           rx(ii) =-1.d0/(deltay*deltay)*tt(ii,jj-1,2)-1.d0/(deltay*deltay)*tt(ii,jj+1,2) ! Se usa la iteraci'on anterior para el calculo del residuo
            
         end do ensambla_tri_x
-        !$omp end parallel do
+        ! $omp end parallel do
         !
         ! Impone cond. frontera
         !
@@ -112,7 +116,9 @@ Program Calor2D
            
         end do
         !
-     end do barrido_y
+   end do barrido_y
+
+   !$omp end parallel do
 
      barrido_x: do ii = 2, nx-1
 
@@ -164,6 +170,8 @@ Program Calor2D
      !$omp end parallel do
      !
      residuo = sqrt(residuo)
+
+     call residue(tt(:,:,1), nx, ny, deltax, deltay, residuo)
      !
      ! write(*,*) "DEBUG: ", iter, residuo
      !
