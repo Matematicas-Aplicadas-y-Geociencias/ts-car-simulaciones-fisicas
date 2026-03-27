@@ -1,6 +1,7 @@
 Program Calor2D
   !
   use omp_lib
+  use utiles, only : residuo_temp
   !
   Implicit none
   !
@@ -17,7 +18,7 @@ Program Calor2D
   !
   ! Variable para el residuo de iteraciones, y tolerancia
   !
-  double precision :: residuo, tolerancia
+  double precision :: residuo, tolerancia, resid_u
   !
   ! Variables del problema fisico
   !
@@ -200,7 +201,10 @@ Program Calor2D
      if( residuo < tolerancia )exit
      !
   end do bucle_iteraciones
+  !
   write(*,*) "Convergencia en ", iter, " iteraciones"
+  !
+  call residuo_temp( tt(1:nx,1:ny,1), deltax, deltay, resid_u )
   !
   ! Aunque es muy tentador, no podemos paralelizar este bucle,
   ! el archivo queda desordenado y gnuplot (y otros graficadores) no
