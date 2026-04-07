@@ -1,16 +1,15 @@
 Program Calor2D
   !
   use omp_lib
-  use utiles, only : residuo_temp
+  !
+  use utiles, only : postproceso_vtk
+  use utiles, only : nx, ny, itermax
   !
   Implicit none
   !
   ! Declaracion de variables
   !
-  ! Iteradores y tamaño del problema
-  !
   integer :: ii, jj, iter
-  integer, parameter :: nx = 60, ny = 30, itermax=10000
   !
   ! Variables del dominio computacional
   !
@@ -34,6 +33,10 @@ Program Calor2D
   double precision :: ay(ny), by(ny), cy(ny) ! Variables para almacenar
   !                                          ! matriz tridiagonal sobredimensionada
   !
+  ! Variables de postproceso
+  !
+  character(48) :: archivo
+  !
   ! Tolerancia
   !
   tolerancia = 1d-3
@@ -44,6 +47,12 @@ Program Calor2D
   deltax  = lx/nx
   ly      = 5.d0
   deltay  = ly/ny
+  do jj = 1, ny
+     yy(jj)=(jj-1)*deltay
+  end do
+  do ii = 1, nx
+     xx(ii)=(ii-1)*deltax
+  end do   
   !
   ! Inicializacion de variables
   !
@@ -204,16 +213,13 @@ Program Calor2D
   !
   write(*,*) "Convergencia en ", iter, " iteraciones"
   !
-  call residuo_temp( tt(1:nx,1:ny,1), deltax, deltay, resid_u )
+  ! call residuo_temp( tt(1:nx,1:ny,1), deltax, deltay, resid_u )
   !
   ! Aunque es muy tentador, no podemos paralelizar este bucle,
   ! el archivo queda desordenado y gnuplot (y otros graficadores) no
   ! los procesan bien.
-  do jj = 1, ny
-     do ii = 1, nx
-        write(*,*) (ii-1)*deltax, (jj-1)*deltay, tt(ii,jj,1)
-     end do
-     write(*,*) ' '
-  end do
+  !
+  archivo = 'salida.vtk'
+  call postproceso_vtk(xx,yy,tt(1:nx,1:ny,1),archivo)
   !
 end Program Calor2D
