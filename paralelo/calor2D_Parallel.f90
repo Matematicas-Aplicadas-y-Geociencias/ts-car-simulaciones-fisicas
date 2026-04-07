@@ -9,7 +9,6 @@ program Calor2D
   double precision :: lx, ly, deltax, deltay
   double precision :: residuo, tolerancia
 
-  double precision :: xx(nx), yy(ny)
   double precision :: tt_old(nx,ny), tt_mid(nx,ny), tt_new(nx,ny)
   double precision :: cfx(ny,2), cfy(nx,2)
 
