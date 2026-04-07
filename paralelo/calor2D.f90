@@ -3,6 +3,7 @@ Program Calor2D
   use omp_lib
   !
   use utiles, only : postproceso_vtk
+  use utiles, only : residuo_temp
   use utiles, only : nx, ny, itermax
   !
   Implicit none
@@ -23,6 +24,7 @@ Program Calor2D
   !
   double precision :: xx(nx), yy(ny)  ! variables de la malla
   double precision :: tt(nx,ny,2)     ! vector de incognitas, 1 para la iteraci'on actual y 2 para la anterior
+  double precision :: resid_tt(nx,ny) ! vector de residuo
   double precision :: tx(nx), ty(ny)  ! vectores de incognitas 1D
   double precision :: rx(nx),ry(ny)   ! vector de resultados del s. ecuaciones
   double precision :: cfx(ny,2),cfy(nx,2) ! vector de condiciones de frontera
@@ -39,7 +41,7 @@ Program Calor2D
   !
   ! Tolerancia
   !
-  tolerancia = 1d-3
+  tolerancia = 1d-4
   !
   ! Dominio computacional
   !
@@ -213,13 +215,14 @@ Program Calor2D
   !
   write(*,*) "Convergencia en ", iter, " iteraciones"
   !
-  ! call residuo_temp( tt(1:nx,1:ny,1), deltax, deltay, resid_u )
+  call residuo_temp( tt(1:nx,1:ny,1), deltax, deltay, resid_tt )
   !
   ! Aunque es muy tentador, no podemos paralelizar este bucle,
   ! el archivo queda desordenado y gnuplot (y otros graficadores) no
   ! los procesan bien.
   !
   archivo = 'salida.vtk'
-  call postproceso_vtk(xx,yy,tt(1:nx,1:ny,1),archivo)
+  !
+  call postproceso_vtk(xx,yy,tt(1:nx,1:ny,1), resid_tt ,archivo)
   !
 end Program Calor2D

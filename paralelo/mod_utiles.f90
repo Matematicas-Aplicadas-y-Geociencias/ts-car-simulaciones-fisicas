@@ -4,7 +4,7 @@ module utiles
   !
   ! Iteradores y tamaño del problema
   !
-  integer, parameter :: nx = 60, ny = 30, itermax=10000
+  integer, parameter :: nx = 120, ny = 60, itermax=10000
   !
 contains
   !
@@ -19,7 +19,7 @@ contains
     !
     double precision, intent(in)  :: temp(:,:)
     double precision, intent(in)  :: deltax,deltay
-    double precision, intent(out) :: resid
+    double precision, intent(out) :: resid(:,:)
     !
     integer  ::  sx, sy
     integer  ::  ii, jj
@@ -30,20 +30,21 @@ contains
     !
     sx = size(temp,1)
     sy = size(temp,dim=2)
+    print*, "DEBUG: ", sx, sy
     !
     ! Se recorren los puntos de la malla
     !
-    ! do jj = 2, sy-1
-    !    !
-    !    do ii = 2, sx-1
-    !       !
-    !       resid = ( temp(ii-1,jj,1)-2.d0*temp(ii,jj,1) + &
-    !            & temp(ii+1,jj,1) )/(deltax*deltax)+&
-    !            & ( temp(ii,jj-1,1)-2.d0*temp(ii,jj,1) +&
-    !            temp(ii,jj+1,1) )/(deltay*deltay)
-    !    end do
-    !    !
-    ! end do
+    do jj = 2, sy-1
+       !
+       do ii = 2, sx-1
+          !
+          resid(ii,jj) = ( temp(ii-1,jj)-2.d0*temp(ii,jj) + &
+               & temp(ii+1,jj) )/(deltax*deltax)+&
+               & ( temp(ii,jj-1)-2.d0*temp(ii,jj) +&
+               temp(ii,jj+1) )/(deltay*deltay)
+       end do
+       !
+    end do
     
   end Subroutine residuo_temp
   !
@@ -52,14 +53,14 @@ contains
   ! Subrutina de postproceso de archivos vtk
   !
   subroutine postproceso_vtk(&
-       &xo,yo,tempo,archivoo&
+       &xo,yo,tempo,residuo,archivoo&
        &)
     ! use malla, only : mi, nj, DBL, mic, njc, zkc
     implicit none
     INTEGER :: i,j,k
     double precision, DIMENSION(nx),    INTENT(in)      :: xo
     double precision, DIMENSION(ny),    INTENT(in)      :: yo
-    double precision, DIMENSION(nx,ny), INTENT(in)      :: tempo
+    double precision, DIMENSION(nx,ny), INTENT(in)      :: tempo, residuo
     CHARACTER(48), INTENT(in)                         :: archivoo
     character(64)                                     :: mico,njco,zkco
     character(128)                                    :: npuntosc
@@ -99,15 +100,15 @@ contains
           end do
        end do
     end do
-    ! write(78) new_line('a')//'SCALARS TEMPER float',new_line('a')
-    ! write(78) 'LOOKUP_TABLE default',new_line('a')
-    ! do k = 1, 1
-    !    do j =1, nj+1
-    !       do i =1, mi+1
-    !          write(78) real(tempo(i,j))
-    !       end do
-    !    end do
-    ! end do
+    write(78) new_line('a')//'SCALARS RESIDUO float',new_line('a')
+    write(78) 'LOOKUP_TABLE default',new_line('a')
+    do k = 1, 1
+       do j =1, ny
+          do i =1, nx
+             write(78) real(residuo(i,j))
+          end do
+       end do
+    end do
     ! write(78) new_line('a')//'VECTORS VELOCITY float',new_line('a')
     ! do k = 1, 1
     !    do j =1, nj+1
