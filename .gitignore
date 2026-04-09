@@ -2,6 +2,7 @@
 *.d
 *.dat
 *.txt
+*.ipynb
 
 # Compiled Object files
 *.slo
