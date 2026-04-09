@@ -10,6 +10,8 @@ Program Calor2D
   !
   ! Declaracion de variables
   !
+  ! Iteradores y tamaño del problema
+  !
   integer :: ii, jj, iter
   !
   ! Variables del dominio computacional
@@ -117,8 +119,6 @@ Program Calor2D
                 & * tt(ii,jj+1,1)
            
         end do ensambla_tri_x
-        !
-        ! Es necesario cerrar el parallel do de esta forma.
         !
         ! Impone cond. frontera
         !
