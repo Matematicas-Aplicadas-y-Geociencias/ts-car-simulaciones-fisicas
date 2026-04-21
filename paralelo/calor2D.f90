@@ -93,6 +93,16 @@ Program Calor2D
      !
      ! Inicializamos el valor de la iteraci'on anterior
      !
+     !$omp parallel do default(none) &
+     !$omp shared( tt ) &
+     !$omp private( ii, jj )
+     do jj = 1, ny
+        do ii = 1, nx
+           tt(ii,jj,2) = tt(ii,jj,1)
+        end do
+     end do
+     !$omp end parallel do
+     !
      tt(:,:,2) = tt(:,:,1)
      !
      !---------------------------------------------------------------
@@ -199,11 +209,13 @@ Program Calor2D
      ! Criterio de convergencia
      !
      residuo = 0.d0
+     !$omp parallel do reduction(+:residuo)
      do ii = 1, nx
         do jj = 1, ny
            residuo = residuo + (tt(ii,jj,1)-tt(ii,jj,2))*(tt(ii,jj,1)-tt(ii,jj,2))
         end do
      end do
+     !$omp end parallel do
      !
      residuo = sqrt(residuo)
      !
@@ -221,8 +233,8 @@ Program Calor2D
   ! el archivo queda desordenado y gnuplot (y otros graficadores) no
   ! los procesan bien.
   !
-  archivo = 'salida.vtk'
+  !archivo = 'salida.vtk'
   !
-  call postproceso_vtk(xx,yy,tt(1:nx,1:ny,1), resid_tt ,archivo)
+  !call postproceso_vtk(xx,yy,tt(1:nx,1:ny,1), resid_tt ,archivo)
   !
 end Program Calor2D
