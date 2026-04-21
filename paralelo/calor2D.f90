@@ -92,8 +92,13 @@ Program Calor2D
   bucle_iteraciones: do iter = 1, itermax
      !
      ! Inicializamos el valor de la iteraci'on anterior
-     !
-     tt(:,:,2) = tt(:,:,1)
+     !$omp parallel do
+     do jj = 2, ny-1
+        do ii = 2, nx-1
+           tt(ii,jj,2) = tt(ii,jj,1)
+        end do
+     end do
+     !$omp end parallel do
      !
      !---------------------------------------------------------------
      !
@@ -199,11 +204,14 @@ Program Calor2D
      ! Criterio de convergencia
      !
      residuo = 0.d0
-     do ii = 1, nx
-        do jj = 1, ny
+     !$omp parallel do reduction(+:residuo)
+     do ii = 2, nx-1
+        do jj = 2, ny-1
+           
            residuo = residuo + (tt(ii,jj,1)-tt(ii,jj,2))*(tt(ii,jj,1)-tt(ii,jj,2))
         end do
      end do
+     !$omp end parallel do
      !
      residuo = sqrt(residuo)
      !
@@ -215,7 +223,7 @@ Program Calor2D
   !
   write(*,*) "Convergencia en ", iter, " iteraciones"
   !
-  call residuo_temp( tt(1:nx,1:ny,1), deltax, deltay, resid_tt )
+  ! call residuo_temp( tt(1:nx,1:ny,1), deltax, deltay, resid_tt )
   !
   ! Aunque es muy tentador, no podemos paralelizar este bucle,
   ! el archivo queda desordenado y gnuplot (y otros graficadores) no
@@ -223,6 +231,6 @@ Program Calor2D
   !
   archivo = 'salida.vtk'
   !
-  call postproceso_vtk(xx,yy,tt(1:nx,1:ny,1), resid_tt ,archivo)
+  ! call postproceso_vtk(xx,yy,tt(1:nx,1:ny,1), resid_tt ,archivo)
   !
 end Program Calor2D
