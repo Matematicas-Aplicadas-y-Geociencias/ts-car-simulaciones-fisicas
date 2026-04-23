@@ -108,7 +108,7 @@ Program Calor2D
      !
      !$omp parallel do default(none) &
      !$omp shared(  deltax, deltay, tt, cfx) &
-     !$omp private( ax, bx, cx, rx, tx, ii )
+     !$omp private( ax, bx, cx, rx, tx )
      barrido_y: do jj = 2, ny-1
         !
         ! Es posible combinar directivas de openmp, por ejemplo,
@@ -209,6 +209,7 @@ Program Calor2D
         do jj = 2, ny-1
            
            residuo = residuo + (tt(ii,jj,1)-tt(ii,jj,2))*(tt(ii,jj,1)-tt(ii,jj,2))
+           
         end do
      end do
      !$omp end parallel do
@@ -217,7 +218,7 @@ Program Calor2D
      !
      ! write(*,*) "DEBUG: ", iter, residuo
      !
-     if( residuo < tolerancia )exit
+     ! if( residuo < tolerancia )exit
      !
   end do bucle_iteraciones
   !
