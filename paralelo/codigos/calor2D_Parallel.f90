@@ -3,7 +3,7 @@ program Calor2D
   use calor2D_utils
   implicit none
 
-  integer, parameter :: nx = 60, ny = 30, itermax = 10000
+  integer, parameter :: nx = 600, ny = 300, itermax = 10000
   integer :: ii, jj, iter
 
   double precision :: lx, ly, deltax, deltay
@@ -55,7 +55,20 @@ program Calor2D
      ! Cada línea en x se resuelve independientemente
      ! leyendo solamente tt_old y escribiendo en tt_mid
      !=========================================
-     tt_mid = tt_old
+
+     ! ------------------------------------
+     ! tt_mid = tt_old
+     ! ------------------------------------
+
+     !$omp parallel do default(none) &
+     !$omp shared(tt_old,tt_mid) &
+     !$omp private(ii,jj), collapse(2)
+     do jj = 1, ny
+        do ii = 1, nx
+           tt_mid(ii,jj) = tt_old(ii,jj)
+        end do
+     end do
+     !$omp end parallel do
 
      !$omp parallel do default(none) &
      !$omp shared(deltax,deltay,tt_old,tt_mid,cfx) &
@@ -94,7 +107,20 @@ program Calor2D
      ! Cada columna en y se resuelve independientemente
      ! leyendo solamente de tt_mid y escribiendo en tt_new
      !=========================================
-     tt_new = tt_mid
+
+     ! ------------------------------------
+     ! tt_new = tt_mid
+     ! ------------------------------------
+
+     !$omp parallel do default(none) &
+     !$omp shared(tt_mid,tt_new) &
+     !$omp private(ii,jj), collapse(2)
+     do ii = 1, nx
+        do jj = 1, ny
+           tt_new(ii,jj) = tt_mid(ii,jj)
+        end do
+     end do
+     !$omp end parallel do
 
      !$omp parallel do default(none) &
      !$omp shared(deltax,deltay,tt_mid,tt_new,cfy) &
@@ -135,17 +161,39 @@ program Calor2D
 
      if (residuo < tolerancia) exit
 
-     tt_old = tt_new
+     ! ------------------------------------
+     ! tt_old = tt_new
+     ! ------------------------------------
+
+     !$omp parallel do default(none) &
+     !$omp shared(tt_new,tt_old) &
+     !$omp private(ii,jj), collapse(2)
+     do ii = 1, nx
+        do jj = 1, ny
+           tt_old(ii,jj) = tt_new(ii,jj)
+        end do
+     end do
+     !$omp end parallel do
+
+     !$omp parallel do default(none) &
+     !$omp shared(tt_new,tt_old) &
+     !$omp private(ii,jj), collapse(2)
+     do ii = 1, nx
+        do jj = 1, ny
+           tt_old(ii,jj) = tt_new(ii,jj)
+        end do
+     end do
+     !$omp end parallel do
 
   end do
 
   write(*,*) 'Convergencia en ', iter, ' iteraciones'
 
-  do jj = 1, ny
-     do ii = 1, nx
-        write(*,*) (ii-1)*deltax, (jj-1)*deltay, tt_new(ii,jj)
-     end do
-     write(*,*) ' '
-  end do
+  !do jj = 1, ny
+   !  do ii = 1, nx
+   !     write(*,*) (ii-1)*deltax, (jj-1)*deltay, tt_new(ii,jj)
+    ! end do
+     !write(*,*) ' '
+  !end do
 
 end program Calor2D

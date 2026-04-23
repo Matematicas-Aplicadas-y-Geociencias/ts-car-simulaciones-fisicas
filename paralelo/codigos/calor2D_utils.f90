@@ -44,8 +44,8 @@ contains
     res = 0.d0
     !$omp parallel do default(none) private(ii,jj) &
     !$omp shared(nx,ny,tt_new,tt_old) reduction(+:res)
-    do ii = 1, nx
-       do jj = 1, ny
+    do jj = 1, ny
+       do ii = 1, nx
           res = res + (tt_new(ii,jj) - tt_old(ii,jj))**2
        end do
     end do
