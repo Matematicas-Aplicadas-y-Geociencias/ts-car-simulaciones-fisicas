@@ -93,9 +93,7 @@ Program Calor2D
      !
      ! Inicializamos el valor de la iteraci'on anterior
      !
-     !$omp parallel do default(none) &
-     !$omp shared( tt ) &
-     !$omp private( ii, jj )
+     !$omp parallel do
      do jj = 1, ny
         do ii = 1, nx
            tt(ii,jj,2) = tt(ii,jj,1)
@@ -227,7 +225,7 @@ Program Calor2D
   !
   write(*,*) "Convergencia en ", iter, " iteraciones"
   !
-  call residuo_temp( tt(1:nx,1:ny,1), deltax, deltay, resid_tt )
+  !call residuo_temp( tt(1:nx,1:ny,1), deltax, deltay, resid_tt )
   !
   ! Aunque es muy tentador, no podemos paralelizar este bucle,
   ! el archivo queda desordenado y gnuplot (y otros graficadores) no

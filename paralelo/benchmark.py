@@ -9,13 +9,16 @@ import subprocess
 import os
 import csv
 import re
+import statistics
+import time as time_module
 
 # ---------------------------------------------------------------------------
 # Configuración
 # ---------------------------------------------------------------------------
 NX = 128
 NY = 128
-THREADS_LIST = list(range(1, 21))     # 1 = serial, 2..20 = paralelo
+THREADS_LIST = list(range(1, 11))     # 1 = serial, 2..20 = paralelo
+NUM_RUNS     = 5                       # repetir cada caso 5 veces
 OUTPUT_CSV   = "benchmark_results.csv"
 BINARY       = "./calor2D_bench"
 MOD_SRC      = "mod_utiles.f90"
@@ -62,26 +65,42 @@ def compile_case():
 
 
 # ---------------------------------------------------------------------------
-# 3. Ejecutar un caso y devolver el tiempo transcurrido (segundos)
+# 3. Ejecutar un caso NUM_RUNS veces y devolver estadísticas
 #    Usa /usr/bin/time -f "%e" para medir el tiempo de reloj
 # ---------------------------------------------------------------------------
-def run_case(n_threads: int) -> float:
+def run_case(n_threads: int) -> dict:
+    """Ejecuta NUM_RUNS veces y retorna dict con estadísticas."""
     env = os.environ.copy()
     env["OMP_NUM_THREADS"] = str(n_threads)
 
-    cmd = ["/usr/bin/time", "-f", "%e", BINARY]
-    result = subprocess.run(
-        cmd,
-        cwd=WORK_DIR,
-        env=env,
-        capture_output=True,
-        text=True,
-    )
+    times = []
+    for run in range(NUM_RUNS):
+        cmd = ["/usr/bin/time", "-f", "%e", BINARY]
+        result = subprocess.run(
+            cmd,
+            cwd=WORK_DIR,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
 
-    # /usr/bin/time -f "%e" escribe el tiempo en stderr como último renglón
-    stderr_lines = [line for line in result.stderr.splitlines() if line.strip()]
-    elapsed = float(stderr_lines[-1].strip())
-    return elapsed
+        # /usr/bin/time -f "%e" escribe el tiempo en stderr como último renglón
+        stderr_lines = [line for line in result.stderr.splitlines() if line.strip()]
+        elapsed = float(stderr_lines[-1].strip())
+        times.append(elapsed)
+
+    # Calcular estadísticas
+    mean_time = statistics.mean(times)
+    stddev = statistics.stdev(times) if len(times) > 1 else 0.0
+    min_time = min(times)
+    max_time = max(times)
+
+    return {
+        "mean": mean_time,
+        "stddev": stddev,
+        "min": min_time,
+        "max": max_time,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -98,30 +117,36 @@ def main():
 
     for n in THREADS_LIST:
         label = "serial (1 hilo)" if n == 1 else f"{n:2d} hilos"
-        print(f"  OMP_NUM_THREADS={n:2d}  ({label})  ...", end=" ", flush=True)
-        t = run_case(n)
-        print(f"{t:8.3f} s")
-        results.append({"threads": n, "time_s": t})
+        print(f"  OMP_NUM_THREADS={n:2d}  ({label})  ({NUM_RUNS} runs)", end=" ", flush=True)
+        stats = run_case(n)
+        print(f"  media: {stats['mean']:8.3f}s  ± {stats['stddev']:6.3f}s  [min: {stats['min']:7.3f}s, max: {stats['max']:7.3f}s]")
+        results.append({
+            "threads": n,
+            "time_mean": stats["mean"],
+            "time_stddev": stats["stddev"],
+            "time_min": stats["min"],
+            "time_max": stats["max"],
+        })
 
     # -----------------------------------------------------------------------
     # 4. Guardar resultados en CSV
     # -----------------------------------------------------------------------
     out_path = os.path.join(WORK_DIR, OUTPUT_CSV)
     with open(out_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["threads", "time_s"])
+        writer = csv.DictWriter(f, fieldnames=["threads", "time_mean", "time_stddev", "time_min", "time_max"])
         writer.writeheader()
         writer.writerows(results)
 
     print(f"\nResultados guardados en: {OUTPUT_CSV}")
 
     # Resumen en pantalla
-    t_s = results[0]["time_s"]   # tiempo serial (1 hilo)
-    print(f"\n{'Hilos':>7}  {'Tiempo (s)':>11}  {'Speedup':>9}  {'Eficiencia':>11}")
-    print("-" * 46)
+    t_s = results[0]["time_mean"]   # tiempo serial promedio (1 hilo)
+    print(f"\n{'Hilos':>7}  {'Tiempo (s)':>13}  {'Desvío':>9}  {'Speedup':>9}  {'Eficiencia':>11}")
+    print("-" * 62)
     for r in results:
-        sp = t_s / r["time_s"]
+        sp = t_s / r["time_mean"]
         ef = sp / r["threads"] * 100
-        print(f"{r['threads']:>7}  {r['time_s']:>11.3f}  {sp:>9.3f}  {ef:>10.1f}%")
+        print(f"{r['threads']:>7}  {r['time_mean']:>13.3f}  {r['time_stddev']:>9.3f}  {sp:>9.3f}  {ef:>10.1f}%")
 
 
 if __name__ == "__main__":
