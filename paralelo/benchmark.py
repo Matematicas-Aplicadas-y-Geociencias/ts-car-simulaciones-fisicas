@@ -15,8 +15,8 @@ import time as time_module
 # ---------------------------------------------------------------------------
 # Configuración
 # ---------------------------------------------------------------------------
-NX = 128
-NY = 128
+NX = 256
+NY = 256
 THREADS_LIST = list(range(1, 11))     # 1 = serial, 2..20 = paralelo
 NUM_RUNS     = 5                       # repetir cada caso 5 veces
 OUTPUT_CSV   = "benchmark_results.csv"

@@ -4,7 +4,7 @@ module utiles
   !
   ! Iteradores y tamaño del problema
   !
-  integer, parameter :: nx = 128, ny = 128, itermax=10000
+  integer, parameter :: nx = 256, ny = 256, itermax=10000
   !
 contains
   !

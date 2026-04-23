@@ -9,10 +9,11 @@ Lee benchmark_results.csv y genera dos paneles:
 import csv
 import os
 import matplotlib.pyplot as plt
+from benchmark import NX,NY,NUM_RUNS
 
 WORK_DIR  = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(WORK_DIR, "benchmark_results.csv")
-OUT_FILE  = os.path.join(WORK_DIR, "benchmark_plot.png")
+OUT_FILE  = os.path.join(WORK_DIR, f"Grafica con {NUM_RUNS} ejecuciones en una malla de {NX}x{NY}.png")
 
 
 def load_data():
@@ -40,7 +41,7 @@ def main():
     effic_err   = [err / p for err, p in zip(speedup_err, threads)]
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    fig.suptitle("Benchmark calor2D 128×128 (OpenMP)", fontsize=13, fontweight="bold")
+    fig.suptitle(f"Grafica con {NUM_RUNS} ejecuciones en una malla de {NX}x{NY} (OpenMP)", fontsize=13, fontweight="bold")
 
     # ------------------------------------------------------------------
     # Panel 1 — Tiempo vs procesadores (con barras de error)
