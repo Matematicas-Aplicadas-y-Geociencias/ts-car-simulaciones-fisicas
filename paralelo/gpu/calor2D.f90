@@ -180,6 +180,10 @@ Program Calor2D
   !
   write(*,*) "Convergencia en ", iter, " iteraciones"
   !
+  call residuo_temp( tt(1:nx,1:ny,1), deltax, deltay, resid_tt )
+  !
   archivo = 'salida.vtk'
+  !
+  call postproceso_vtk(xx,yy,tt(1:nx,1:ny,1), resid_tt ,archivo)
   !
 end Program Calor2D
