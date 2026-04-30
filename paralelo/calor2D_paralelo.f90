@@ -1,6 +1,11 @@
 Program Calor2D
   !
   use omp_lib
+  !
+  use utiles, only : postproceso_vtk
+  use utiles, only : residuo_temp
+  use utiles, only : nx, ny, itermax
+  !
   Implicit none
   !
   ! Declaracion de variables
@@ -8,18 +13,20 @@ Program Calor2D
   ! Iteradores y tamaño del problema
   !
   integer :: ii, jj, iter
-  integer, parameter :: nx = 60, ny = 30 !, itermax=1000
   !
   ! Variables del dominio computacional
   !
-  double precision :: lx, ly, deltax, deltay, max_value_dif
+  double precision :: lx, ly, deltax, deltay
+  !
+  ! Variable para el residuo de iteraciones, y tolerancia
+  !
+  double precision :: residuo, tolerancia, resid_u
   !
   ! Variables del problema fisico
   !
   double precision :: xx(nx), yy(ny)  ! variables de la malla
-  double precision :: tt(nx,ny)       ! vector de incognitas
-  double precision :: ct(nx,ny)       ! copia del vector de incognnitas
-  double precision :: uu(nx,ny)		  ! Diferencia entre tt y ct
+  double precision :: tt(nx,ny,2)     ! vector de incognitas, 1 para la iteraci'on actual y 2 para la anterior
+  double precision :: resid_tt(nx,ny) ! vector de residuo
   double precision :: tx(nx), ty(ny)  ! vectores de incognitas 1D
   double precision :: rx(nx),ry(ny)   ! vector de resultados del s. ecuaciones
   double precision :: cfx(ny,2),cfy(nx,2) ! vector de condiciones de frontera
@@ -29,14 +36,27 @@ Program Calor2D
   !
   double precision :: ay(ny), by(ny), cy(ny) ! Variables para almacenar
   !                                          ! matriz tridiagonal sobredimensionada
-  !  
+  !
+  ! Variables de postproceso
+  !
+  character(48) :: archivo
+  !
+  ! Tolerancia
+  !
+  tolerancia = 1d-4
+  !
   ! Dominio computacional
   !
   lx      = 10.d0
   deltax  = lx/nx
   ly      = 5.d0
   deltay  = ly/ny
-  max_value_dif = 0.d0 ! Esta variable será la el maximo de la diferencia
+  do jj = 1, ny
+     yy(jj)=(jj-1)*deltay
+  end do
+  do ii = 1, nx
+     xx(ii)=(ii-1)*deltax
+  end do   
   !
   ! Inicializacion de variables
   !
@@ -49,11 +69,13 @@ Program Calor2D
   by(:)   = 0.d0
   cy(:)   = 0.d0
   ry(:)   = 0.d0
-  tt(:,:) = 0.d0
-  ct(:,:) = 0.d0
-  uu(:,:) = 0.d0
+  tt(:,:,:) = 0.d0
   !
   ! Condiciones de frontera en direcci'on x
+  !
+  ! Estos bucles pueden paralelizarse, pero hay que valorar bien la cantidad
+  ! de trabajo que se va a compartir respecto al tiempo necesario para abrir
+  ! los hilos paralelos.
   !
   do ii = 1, ny
      cfx(ii,1) = 1.d0
@@ -63,28 +85,47 @@ Program Calor2D
   ! Condiciones de frontera en direcci'on y
   !
   do jj = 1, nx
-     cfy(jj,1) = 0.d0
+     cfy(jj,1) = 1.d0
      cfy(jj,2) = 0.d0
   end do
   !
-  bucle_iteraciones: do while(1 == 1)
-  !bucle_iteraciones: do iter = 1, itermax
+  bucle_iteraciones: do iter = 1, itermax
      !
-     ct(:,:) = tt(:,:)
-	 !
-	 !
-	 !$omp parallel do default(none) private(ax,bx,cx,rx,tx) shared(deltay,deltax,cfx,tt)
+     ! Inicializamos el valor de la iteraci'on anterior
+     !
+     !$omp parallel do default(none) &
+     !$omp shared(tt) 
+     copia_anterior: do jj = 1, ny
+		do ii = 1, nx
+			tt(ii,jj,2) = tt(ii,jj,1)
+		end do
+	 end do copia_anterior
+	 !$omp end parallel do
+     !
+     !---------------------------------------------------------------
+     !
+     ! Paralelizamos el barrido en la direcci'on y en bandas
+     ! compuestas por grupos de l'ineas, observamos que si usamos pocas
+     ! l'ineas tenemos una aceleraci'on pobre o ausente
+     !
+     !$omp parallel do default(none) &
+     !$omp shared(  deltax, deltay, tt, cfx) &
+     !$omp private( ax, bx, cx, rx, tx, ii )
      barrido_y: do jj = 2, ny-1
-		! $omp parallel do default(none) shared(ax,bx,cx,rx,deltax,deltay,jj,tt)
+        !
+        ! Es posible combinar directivas de openmp, por ejemplo,
+        ! si necesitamos una regi'on paralela unicamente para un bucle,
+        ! podemos combinar "parallel" con "do"
+        !
         ensambla_tri_x: do ii = 2, nx-1
 
            ax(ii) = 1.d0/(deltax*deltax)
            bx(ii) =-2.d0*(1.d0/(deltax*deltax)+ 1.d0/(deltay*deltay))
            cx(ii) = 1.d0/(deltax*deltax)
-           rx(ii) =-1.d0/(deltay*deltay)*tt(ii,jj-1)-1.d0/(deltay*deltay)*tt(ii,jj+1)
+           rx(ii) =-1.d0/(deltay*deltay)*tt(ii,jj-1,1)-1.d0/(deltay*deltay)&
+                & * tt(ii,jj+1,1)
            
         end do ensambla_tri_x
-        ! $omp end parallel do
         !
         ! Impone cond. frontera
         !
@@ -106,26 +147,33 @@ Program Calor2D
         !
         do ii = 1, nx
            
-           tt(ii,jj) = tx(ii)
+           tt(ii,jj,1) = tx(ii)
            
         end do
         !
      end do barrido_y
      !$omp end parallel do
-
-     
-	 !$omp parallel do default(none) private(ay,by,cy,ry,ty) shared(deltay,deltax,cfy,tt)    
+     !
+     !---------------------------------------------------------------
+     !
+     ! Paralelizamos el barrido en la direcci'on x en bandas
+     ! compuestas por grupos de l'ineas, observamos que si usamos pocas
+     ! l'ineas tenemos una aceleraci'on pobre o ausente
+     !
+     !$omp parallel do default(none) &
+     !$omp shared(  deltax, deltay, tt, cfy) &
+     !$omp private( ay, by, cy, ry, ty )
      barrido_x: do ii = 2, nx-1
-		! $omp parallel do default(none) shared(ay,by,cy,ry,tt,deltax,deltay,ii)
+
         ensambla_tri_y: do jj = 2, ny-1
 
            ay(jj) = 1.d0/(deltay*deltay)
            by(jj) =-2.d0*(1.d0/(deltax*deltax)+ 1.d0/(deltay*deltay))
            cy(jj) = 1.d0/(deltay*deltay)
-           ry(jj) =-1.d0/(deltax*deltax)*tt(ii-1,jj)-1.d0/(deltax*deltax)*tt(ii+1,jj)
+           ry(jj) =-1.d0/(deltax*deltax)*tt(ii-1,jj,1)-1.d0/(deltax*deltax)*&
+                tt(ii+1,jj,1)
            
         end do ensambla_tri_y
-        ! $omp end parallel do
         !
         ! Impone cond. frontera
         !
@@ -134,7 +182,7 @@ Program Calor2D
         cy(1)     = 0.d0
         ry(1)     = cfy(ii,1)
         !
-        ay(ny)    = -1.d0 
+        ay(ny)    =-1.d0 
         by(ny)    = 1.d0
         cy(ny)    = 0.d0 ! no se usa en los c'alculos
         ry(ny)    = cfy(ii,2)
@@ -148,30 +196,43 @@ Program Calor2D
         !
         do jj = 1, ny
            
-           tt(ii,jj) = ty(jj)
+           tt(ii,jj,1) = ty(jj)
            
         end do
         !
      end do barrido_x
      !$omp end parallel do
      !
+     ! Criterio de convergencia
      !
-     !Criterio de convergencia
-     uu = tt - ct
+     residuo = 0.d0
+     !$omp parallel do default(none) &
+     !$omp shared(tt,residuo)
+     do jj = 1, ny
+        do ii = 1, nx
+           residuo = residuo + (tt(ii,jj,1)-tt(ii,jj,2))*(tt(ii,jj,1)-tt(ii,jj,2))
+        end do
+     end do
+     !$omp end parallel do 
      !
-     uu = uu * uu
-     max_value_dif = maxval(uu)
-     if(max_value_dif < 1E-10) exit
-     
-     
-  !end do bucle_iteraciones
+     residuo = sqrt(residuo)
+     !
+     ! write(*,*) "DEBUG: ", iter, residuo
+     !
+     if( residuo < tolerancia )exit
+     !
   end do bucle_iteraciones
   !
-  do jj = 1, ny
-     do ii = 1, nx
-        write(*,*) (ii-1)*deltax, (jj-1)*deltay, tt(ii,jj)
-     end do
-     write(*,*) ' '
-  end do
+  write(*,*) "Convergencia en ", iter, " iteraciones"
+  !
+  call residuo_temp( tt(1:nx,1:ny,1), deltax, deltay, resid_tt )
+  !
+  ! Aunque es muy tentador, no podemos paralelizar este bucle,
+  ! el archivo queda desordenado y gnuplot (y otros graficadores) no
+  ! los procesan bien.
+  !
+  !archivo = 'salida.vtk'
+  !
+  !call postproceso_vtk(xx,yy,tt(1:nx,1:ny,1), resid_tt ,archivo)
   !
 end Program Calor2D
