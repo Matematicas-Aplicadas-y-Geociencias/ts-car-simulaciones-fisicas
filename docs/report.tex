@@ -1,0 +1,854 @@
+% !TeX program = pdflatex
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage{float}
+
+\geometry{margin=1.5cm}
+\graphicspath{{figures/}}
+
+\title{TEMAS SELECTOS DE C\'OMPUTO DE ALTO RENDIMIENTO PARA SIMULACIONES F\'ISICAS\\
+Analisis Num\'erico y Computacional\\
+Ecuacion de Calor/Laplace en 1D y 2D\\
+Dr. Juan Carlos Cajas}
+\author{Autor: Emilio Ramirez}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Este documento presenta la formulaci\'on matem\'atica, discretizaci\'on por diferencias
+finitas y evaluacion computacional de solucionadores para ecuaciones de tipo
+calor/Laplace. Se usa el algoritmo de Thomas para sistemas tridiagonales y se
+analiza el rendimiento de la paralelizaci\'on con OpenMP en el caso bidimensional.
+\end{abstract}
+
+\section{Introducci\'on}
+El objetivo es documentar una linea base reproducible para comparar variantes de
+implementacion sin cambiar el paradigma matem\'atico ni de paralelizaci\'on.
+
+\section{Modelo matem\'atico}
+\subsection{Caso 1D estacionario}
+\begin{equation}
+\frac{d}{dx}\left(k\frac{dT}{dx}\right) + \dot{q} = 0
+\end{equation}
+
+Para $k$ constante (material isotr\'opico y $\Delta T$ peque\~nos) 
+y sin fuentes internas ($\dot{q}=0$), se obtiene la Ecuaci\'on de Laplace:
+
+\begin{equation}
+\frac{d^2T}{dx^2}=0
+\end{equation}
+
+\subsection{Caso 2D estacionario}
+
+Para el caso bidimensional estacionario, se obtiene la ecuaci\'on de Laplace en 2D:
+
+\begin{equation}
+\frac{\partial}{\partial x}\left(k\frac{\partial T}{\partial x}\right) + \frac{\partial}{\partial y}\left(k\frac{\partial T}{\partial y}\right) + \dot{q} = 0
+\end{equation}
+
+\begin{equation}
+\Rightarrow \frac{\partial^2T}{\partial x^2}+\frac{\partial^2T}{\partial y^2}=0
+\end{equation}
+
+\begin{equation}
+\Rightarrow \nabla^2 T = 0
+\end{equation}
+
+\subsection{Condiciones de frontera}
+
+Se consideran condiciones de frontera de tipo Dirichlet (temperatura fija) y 
+Neumann (flujo de calor especificado) seg\'un el experimento.
+
+\textbf{Frontera tipo Dirichlet:}
+
+\begin{equation}
+T(0)=T_0, \quad T(L)=T_L
+\end{equation}
+
+\textbf{Frontera tipo Neumann:}
+
+Si $q_N$ representa el flujo de calor saliente normal a la frontera, la
+condici\'on de Neumann se escribe como:
+
+\begin{equation}
+-k\nabla T \cdot \mathbf{n} = q_N.
+\end{equation}
+
+En el caso unidimensional, con normal exterior $\mathbf{n}=-1$ en $x=0$ y
+$\mathbf{n}=1$ en $x=L$, esto equivale a:
+
+\begin{equation}
+k\frac{dT}{dx}\bigg|_{x=0} = q_0, \quad
+-k\frac{dT}{dx}\bigg|_{x=L} = q_L.
+\end{equation}
+
+\section{Discretizacion del caso 1D}
+
+La ecuaci\'on de Laplace se discretiza usando diferencias finitas.
+
+\subsection{Ecuaci\'on interior}
+
+Se parte de la ecuaci\'on diferencial Eq. (2) discretizada:
+
+\begin{equation}
+\frac{\Delta}{\Delta x} \left( \frac{\Delta T}{\Delta x} \right) = 0
+\end{equation}
+
+\begin{equation}
+\Rightarrow \frac{\Delta}{\Delta x} \left( \frac{T(i + 1) - T(i)}{\Delta x} \right) = 0
+\end{equation}
+
+\begin{equation}
+\Rightarrow\frac{ \Delta T(i + 1) - \Delta T(i)}{ (\Delta x)^2} = 0
+\end{equation}
+
+\begin{equation}
+\Rightarrow \frac{\left( T(i + 2) - T(i + 1) \right) - 
+\left( T(i + 1) - T(i) \right)}{ (\Delta x)^2} = 0
+\end{equation}
+
+\begin{equation}
+\Rightarrow T_{i+2} - 2 T_{i+1} + T_{i} = 0
+\end{equation}
+
+Cambiando el \'indice $i+1 \to i$:
+
+\begin{equation}
+T_{i+1} -2T_i + T_{i-1}=0
+\end{equation}
+
+con condiciones de frontera de tipo Dirichlet/Neumann seg\'un el experimento.
+
+\textbf{Ecuaci\'on matricial 1D:}
+
+La Eq. (13) se puede escribir en forma matricial $A \mathbf{T} = \mathbf{r}$,
+donde $A$ es una matriz tridiagonal con $-2$ en la diagonal principal y $1$ 
+en las diagonales adyacentes, $\mathbf{T}$ es el vector de temperaturas 
+desconocidas y $\mathbf{r}$ es el vector de condiciones de frontera.
+
+\begin{equation}
+\begin{pmatrix}
+1 & -2 & 1 & 0 & 0  \cdots & 0 & 0 & 0 \\
+0 & 1 & -2 & 1 & 0  \cdots & 0 & 0 & 0 \\
+0 & 0 & 1 & -2 & 1  \cdots & 0 & 0 & 0 \\
+\vdots & \vdots & \vdots & \ddots & \vdots \\
+0 & 0 & 0 & 0 & 0  \cdots & 1 & -2 & 1
+\end{pmatrix}
+\begin{pmatrix}
+T_2 \\
+T_3 \\
+T_4 \\
+\vdots \\
+T_{n-1}
+\end{pmatrix}
+=
+\begin{pmatrix}
+0 \\
+0 \\
+0 \\
+\vdots \\
+0
+\end{pmatrix}
+\end{equation}
+
+Se hace notar que faltan las temperaturas frontera i.e. $T_1$ y $T_n$ que 
+depender\'an del tipo de frontera (Dirichlet o Neumann).
+
+\textbf{Ecuaci\'on matricial 1D con condiciones frontera tipo Dirichlet:}
+
+Con condiciones de frontera de tipo Dirichlet, el sistema se modifica para 
+incluir los valores conocidos en las matrices. Dado que $T_1$ y $T_n$ son 
+conocidos:
+
+\begin{equation}
+T_1 = T_0, \quad T_n = T_L
+\end{equation}
+
+\begin{equation}
+\begin{pmatrix}
+1 & 0 & 0 & 0 & 0  \cdots & 0 & 0 & 0 \\
+1 & -2 & 1 & 0 & 0  \cdots & 0 & 0 & 0 \\
+0 & 1 & -2 & 1 & 0  \cdots & 0 & 0 & 0 \\
+\vdots & \vdots & \vdots & \ddots & \vdots \\
+0 & 0 & 0 & 0 & 0  \cdots & 1 & -2 & 1 \\
+0 & 0 & 0 & 0 & 0  \cdots & 0 & 0 & 1
+\end{pmatrix}
+\begin{pmatrix}
+T_1 \\
+T_2 \\
+T_3 \\
+\vdots \\
+T_{n-1} \\
+T_n
+\end{pmatrix}
+=
+\begin{pmatrix}
+T_0 \\
+0 \\
+0 \\
+\vdots \\
+0 \\
+T_L
+\end{pmatrix}
+\end{equation}
+
+\textbf{Ecuaci\'on matricial 1D con frontera izquierda tipo Neumann:}
+
+Se estudia el caso en el que la frontera izquierda usa una condici\'on de Neumann
+y la frontera derecha conserva una condici\'on de Dirichlet. Con flujo saliente
+normal $q_0$ en $x=0$:
+
+\begin{equation}
+k\frac{dT}{dx}\bigg|_{x=0}=q_0.
+\end{equation}
+
+Aproximando la derivada normal con una diferencia hacia adelante:
+
+\begin{equation}
+\frac{dT}{dx}\bigg|_{x=0} \approx \frac{T_2-T_1}{\Delta x},
+\end{equation}
+
+se obtiene:
+
+\begin{equation}
+k\frac{T_2-T_1}{\Delta x}=q_0
+\quad \Rightarrow \quad
+-T_1+T_2=\frac{q_0}{k}\Delta x.
+\end{equation}
+
+Por tanto, el sistema algebraico para una frontera izquierda Neumann y una
+frontera derecha Dirichlet $T_n=T_L$ queda:
+
+\begin{equation}
+\begin{pmatrix}
+-1 & 1 & 0 & 0 & 0  \cdots & 0 & 0 & 0 \\
+1 & -2 & 1 & 0 & 0  \cdots & 0 & 0 & 0 \\
+0 & 1 & -2 & 1 & 0  \cdots & 0 & 0 & 0 \\
+\vdots & \vdots & \vdots & \ddots & \vdots \\
+0 & 0 & 0 & 0 & 0  \cdots & 1 & -2 & 1 \\
+0 & 0 & 0 & 0 & 0  \cdots & 0 & 0 & 1
+\end{pmatrix}
+\begin{pmatrix}
+T_1 \\
+T_2 \\
+T_3 \\
+\vdots \\
+T_{n-1} \\
+T_n
+\end{pmatrix}
+=
+\begin{pmatrix}
+\dfrac{q_0}{k}\Delta x \\
+0 \\
+0 \\
+\vdots \\
+0 \\
+T_L
+\end{pmatrix}.
+\end{equation}
+
+Si se imponen condiciones de Neumann en ambos extremos para la ecuaci\'on de
+Laplace sin fuentes, el sistema queda determinado solo hasta una constante
+aditiva y requiere una condici\'on adicional de referencia. Adem\'as, los flujos
+deben cumplir la condici\'on de compatibilidad $q_0+q_L=0$.
+
+\section{Algoritmo de Thomas}
+
+Tenemos el sistema tridiagonal $A \mathbf{T} = \mathbf{r}$, donde $A$ es 
+una matriz tridiagonal con elementos $a_i$ en la subdiagonal, $b_i$ en la diagonal,
+y $c_i$ en la superdiagonal. De la misma manera, $\mathbf{T}$ es el vector de 
+temperaturas desconocidas y $\mathbf{r}$ es el vector de condiciones de frontera,
+con elementos $d_i$.
+
+\begin{align*}
+b_1 T_1 + c_1 T_2 &= r_1 \\
+a_2 T_1 + b_2 T_2 + c_2 T_3 &= r_2 \\
+a_3 T_2 + b_3 T_3 + c_3 T_4 &= r_3 \\
+&\vdots \\
+a_{n-1} T_{n-2} + b_{n-1} T_{n-1} + c_{n-1} T_n &= r_{n-1} \\
+a_n T_{n-1} + b_n T_n &= r_n
+\end{align*}
+
+\begin{equation}
+\begin{pmatrix}
+b_1 & c_1 & 0 & 0 & 0  \cdots & 0 & 0 & 0 \\
+a_2 & b_2 & c_2 & 0 & 0  \cdots & 0 & 0 & 0 \\
+0 & a_3 & b_3 & c_3 & 0  \cdots & 0 & 0 & 0 \\
+\vdots & \vdots & \vdots & \ddots & \vdots \\
+0 & 0 & 0 & 0 & 0  \cdots & a_{n-1} & b_{n-1} & c_{n-1} \\
+0 & 0 & 0 & 0 & 0  \cdots & 0 & a_n & b_n
+\end{pmatrix}
+\begin{pmatrix}T_1 \\
+T_2 \\
+T_3 \\
+\vdots \\
+T_{n-1} \\
+T_n
+\end{pmatrix}
+=
+\begin{pmatrix}r_1 \\
+r_2 \\
+r_3 \\
+\vdots \\
+r_{n-1} \\
+r_n
+\end{pmatrix}
+\end{equation}
+
+As\'i, se tienen las ecuaciones del sistema tridiagonal a resolver:
+
+\begin{equation}
+a_i T_{i-1}+b_iT_i+c_iT_{i+1}=r_i,
+\quad i=1,2,\ldots,n, \quad a_1=0, \quad c_n=0.
+\end{equation}
+
+Resolviendo,
+
+\begin{equation}
+T_1 = \frac{r_1 - c_1 T_2}{b_1}
+\end{equation}
+
+Y definimos,
+
+\begin{equation}
+\tilde{r_1} = \frac{r_1}{b_1}, \quad \tilde{c_1} = \frac{c_1}{b_1}
+\end{equation}
+
+Con lo cual, la primera ecuaci\'on se reescribe como:
+
+\begin{equation}
+T_1 = \tilde{r_1} - \tilde{c_1} T_2
+\end{equation}
+
+Si ahora resolvemos el segundo rengl\'on para $T_2$:
+
+\begin{equation}
+T_2 = \frac{r_2 - a_2 T_1 - c_2 T_3}{b_2}
+\end{equation}
+
+\begin{equation}
+\Rightarrow T_2 = \frac{r_2 - a_2 (\tilde{r_1} - \tilde{c_1} T_2) - c_2 T_3}{b_2}
+\end{equation}
+
+\begin{equation}
+\Rightarrow T_2 \left(1 - \frac{a_2 \tilde{c_1}}{b_2}\right) = \frac{r_2 - a_2 \tilde{r_1} - c_2 T_3}{b_2}
+\end{equation}
+
+\begin{equation}
+\Rightarrow T_2 = \frac{r_2 - a_2 \tilde{r_1} - c_2 T_3}{b_2 - a_2 \tilde{c_1}}
+\end{equation}
+
+Y si ahora definimos 
+
+\begin{equation}
+\tilde{r_2} = \frac{r_2 - a_2 \tilde{r_1}}{b_2 - a_2 \tilde{c_1}}, \quad 
+\tilde{c_2} = \frac{c_2}{b_2 - a_2 \tilde{c_1}}
+\end{equation}
+
+Entonces nos queda,
+
+\begin{equation}
+T_2 = \tilde{r_2} - \tilde{c_2} T_3
+\end{equation}
+
+En general, para $i=2,3,\ldots,n-1$ se tiene:
+
+\begin{equation}
+T_i = \tilde{r_i} - \tilde{c_i} T_{i+1},
+\end{equation}
+
+con:
+
+\begin{equation}
+\tilde{r_i} = \frac{r_i - a_i \tilde{r}_{i-1}}{b_i - a_i \tilde{c}_{i-1}}, \quad
+\tilde{c_i} = \frac{c_i}{b_i - a_i \tilde{c}_{i-1}}.
+\end{equation}
+
+Para $T_n$ se tiene:
+
+\begin{equation}
+T_n = \frac{r_n - a_n T_{n-1}}{b_n}
+\end{equation}
+
+\begin{equation}
+\Rightarrow T_n = \frac{r_n - a_n 
+\left( \tilde{r}_{n-1} - \tilde{c}_{n-1} T_{n} \right)}{b_n}
+\end{equation}
+
+\begin{equation}
+\Rightarrow T_n \left(1 + \frac{a_n \tilde{c}_{n-1}}{b_n}\right) 
+= \frac{r_n - a_n \tilde{r}_{n-1}}{b_n}
+\end{equation}
+
+\begin{equation}
+\Rightarrow T_n = \frac{r_n - a_n \tilde{r}_{n-1}}{b_n + a_n \tilde{c}_{n-1}}
+\end{equation}
+
+\begin{equation}
+\Rightarrow T_n = \tilde{r}_n
+\end{equation}
+
+\section{Metodologia computacional del caso 1D}
+
+Para el caso unidimensional se resuelve directamente el sistema tridiagonal
+producido por la discretizaci\'on de Laplace:
+
+\begin{equation}
+A\mathbf{T}=\mathbf{r}.
+\end{equation}
+
+Se implementa el algoritmo de Thomas para resolver este sistema de forma 
+eficiente. Se usa el comando \verb|gfortran tridiagonal.f90 calor1D.f90 -o calor1D| 
+para compilar la versi\'on secuencial. El programa se ejecuta con \verb|./calor1D| 
+y los resultados se guardan en archivos de texto para su posterior an\'alisis.
+
+\medskip{}
+
+Se muestra a continuaci\'on el c\'odigo Fortran de la versi\'on secuencial 
+para el caso 1D. Se comienza abriendo el programa y declarando las variables 
+necesarias para el algoritmo:
+
+\begin{verbatim}
+Program Calor1D
+  Implicit none
+  integer :: ii
+  integer, parameter :: nn = 60
+  integer, parameter :: L = 10 ! metros
+  double precision :: deltax
+  double precision, parameter :: q0_sobre_k = -1.d0
+  double precision :: tt(nn)    ! vector de incognitas
+  double precision :: rr(nn)    ! vector de resultados del s. ecuaciones
+  double precision :: aa(nn), bb(nn), cc(nn) ! Variables para almacenar
+  double precision :: cp(nn), den(nn)
+\end{verbatim}
+
+Establecemos el dominio computacional y el paso de malla $\Delta x = L/nn$:
+El valor $L=10$ metros define la longitud total del dominio de soluci\'on; se elige
+arbitrariamente para este problema de prueba. La discretizaci\'on se realiza 
+con $nn=60$ nodos, resultando en $\Delta x = L/60$.
+
+\begin{verbatim}
+  ! Dominio computacional
+  deltax  = dble(L)/nn
+\end{verbatim}
+
+Luego, se inicializan los vectores necesarios para el algoritmo de Thomas.
+Se hace notar que no se construye la matriz completa $A$, sino que se almacenan 
+solamente las diagonales $a$, $b$ y $c$ en los vectores correspondientes.
+
+\begin{verbatim}
+  ! Inicializacion de variables
+  !
+  aa(:)   = 0.d0
+  bb(:)   = 0.d0
+  cc(:)   = 0.d0
+  rr(:)   = 0.d0
+\end{verbatim}
+
+Se ensamblan los coeficientes de la matriz tridiagonal y el vector de resultados
+seg\'un la discretizaci\'on de la ecuaci\'on de Laplace. Para los nodos 
+interiores, los coeficientes son constantes: $a_i=1$, $b_i=-2$ y $c_i=1$.
+
+\begin{verbatim}
+  ! Ensamblar la matriz tridiagonal y el vector de resultados
+  do ii = 2, nn-1
+     !
+     aa(ii) = 1.d0
+     bb(ii) =-2.d0
+     cc(ii) = 1.d0
+     rr(ii) = 0.d0
+     !
+  end do
+\end{verbatim}
+
+A continuaci\'on, se imponen las condiciones de frontera. En este caso, 
+se asume una condici\'on de Neumann en el extremo izquierdo ($x=0$) con 
+flujo $q_0$ y una condici\'on de Dirichlet en el extremo derecho ($x=L$) 
+con temperatura $T_L$. Esto se traduce en los coeficientes de la primera y 
+\'ultima ecuaciones del sistema.
+
+\begin{verbatim}
+  ! Impone cond. frontera
+  !
+  aa(1)     = 0.d0 ! no se usa en los c'alculos
+  bb(1)     =-1.d0
+  cc(1)     = 1.d0
+  rr(1)     = q0_sobre_k * deltax
+  !  
+  aa(nn)    = 0.d0
+  bb(nn)    = 1.d0
+  cc(nn)    = 0.d0 ! no se usa en los c'alculos
+  rr(nn)    = 0.d0
+\end{verbatim}
+
+Se resuelve el sistema tridiagonal usando el algoritmo de Thomas, que se 
+implementa en las subrutinas \verb|tri_factor| y \verb|tri_solve|. Estas
+subrutinas realizan la factorizaci\'on y la resoluci\'on del sistema de 
+forma eficiente, aprovechando la estructura tridiagonal de la matriz.
+
+\begin{verbatim}
+  ! Resolver el problema algebraico
+  !
+  call tri_factor(aa,bb,cc,cp,den,nn)
+  call tri_solve(aa,cp,den,rr,tt,nn)
+\end{verbatim}
+
+Finalmente, se guarda el resultado en un archivo de texto para su posterior
+an\'alisis. Se escribe el vector de temperaturas $tt$ junto con las posiciones
+correspondientes en el dominio.
+
+\begin{verbatim}
+  ! Postproceso
+  !
+  do ii = 1, nn
+     write(101,*) (ii-1)*deltax, tt(ii)
+  end do
+  !
+end Program Calor1D
+\end{verbatim}
+
+\textbf{Subrutinas: \texttt{tri, tri\_solver y tri\_factor}:}  
+
+La subrutina \verb|tri| resuelve el sistema tridiagonal completo en un solo
+paso: primero realiza la eliminaci\'on gaussiana hacia adelante y luego la
+sustituci\'on hacia atr\'as.
+
+\medskip
+
+\textit{Barrido hacia adelante (\texttt{gausselim}):}
+Para $i = 2, 3, \ldots, n$, se calcula el multiplicador de eliminaci\'on y
+se actualizan la diagonal y el lado derecho \textit{in-place}:
+
+\begin{align}
+m_i          &= \frac{a_i}{b_{i-1}}, \\
+b_i          &\leftarrow b_i - m_i\, c_{i-1}, \\
+r_i          &\leftarrow r_i - m_i\, r_{i-1}.
+\end{align}
+
+Tras este barrido el sistema original $A\mathbf{u}=\mathbf{r}$ ha quedado
+reducido a uno triangular superior equivalente $U\mathbf{u}=\mathbf{r}^*$,
+donde $\mathbf{r}^*$ denota el lado derecho transformado.
+
+\medskip
+
+\textit{Sustituci\'on hacia atr\'as (\texttt{sustatras}):}
+Se obtiene la \'ultima inc\'ognita directamente y luego se retrocede:
+
+\begin{align}
+u_n &= \frac{r_n^{\,*}}{b_n^{\,*}}, \\[4pt]
+u_i &= \frac{r_i^{\,*} - c_i\, u_{i+1}}{b_i^{\,*}},
+\quad i = n-1,\, n-2,\, \ldots,\, 1.
+\end{align}
+
+El coste total es $\mathcal{O}(n)$ operaciones, frente a los
+$\mathcal{O}(n^3)$ de una eliminaci\'on gaussiana general.
+
+\textbf{Subrutina tri\_factor:}
+
+Se explica a continuaci\'on el c\'odigo de la subrutina \verb|tri_factor|, 
+que realiza la factorizaci\'on de Thomas para una matriz tridiagonal 
+constante.
+
+\medskip{}
+
+Se declaran las variables de entrada y salida, incluyendo los vectores de 
+coeficientes de la matriz tridiagonal y los vectores para almacenar la 
+factorizaci\'on.
+
+\begin{verbatim}
+  subroutine tri(a,b,c,r,u,n)
+  !
+  ! Subrutina que resuelve el problema
+  !
+  ! Ax=r donde A es una matriz tridiagonal con
+  ! elementos a, b, c
+  ! y devuelve el valor de u
+  !
+  implicit none
+  !
+  integer,          intent(in)    :: n
+  double precision, intent(in)    :: a(n),c(n)
+  double precision, intent(inout) :: b(n),r(n)
+  double precision, intent(inout) :: u(n)
+  integer :: i
+  double precision :: m
+
+  ! eliminacion elementos bajo la matriz
+  gausselim: do i=2,n
+     m = a(i)/b(i-1)
+     r(i)=r(i)-m*r(i-1)
+     b(i)=b(i)-m*c(i-1)
+  end do gausselim
+  !
+  ! solucion para u
+  !
+  u(n)=r(n)/b(n)
+  sustatras: do i=n-1,1,-1
+     u(i)=(r(i)-c(i)*u(i+1))/b(i)
+  end do sustatras
+  !
+end subroutine tri
+
+subroutine tri_factor(a,b,c,cp,den,n)
+  !
+  ! Factorizacion de Thomas para una matriz tridiagonal constante.
+  !
+  implicit none
+  !
+  integer,          intent(in)  :: n
+  double precision, intent(in)  :: a(n),b(n),c(n)
+  double precision, intent(out) :: cp(n),den(n)
+  integer :: i
+
+  den(1) = b(1)
+  cp(1)  = c(1)/den(1)
+
+  do i=2,n-1
+     den(i) = b(i) - a(i)*cp(i-1)
+     cp(i) = c(i)/den(i)
+  end do
+  den(n) = b(n) - a(n)*cp(n-1)
+  cp(n) = 0.d0
+end subroutine tri_factor
+
+subroutine tri_solve(a,cp,den,r,u,n)
+  !
+  ! Sustitucion usando la factorizacion calculada por tri_factor.
+  ! Modifica r in-place para guardar el lado derecho transformado.
+  !
+  implicit none
+  !
+  integer,          intent(in)    :: n
+  double precision, intent(in)    :: a(n),cp(n),den(n)
+  double precision, intent(inout) :: r(n)
+  double precision, intent(inout) :: u(n)
+  integer :: i
+
+  r(1) = r(1)/den(1)
+  do i=2,n
+     r(i) = (r(i) - a(i)*r(i-1))/den(i)
+  end do
+
+  u(n) = r(n)
+  do i=n-1,1,-1
+     u(i) = r(i) - cp(i)*u(i+1)
+  end do
+end subroutine tri_solve
+
+\end{verbatim}
+
+
+\section{Discretizaci\'on del caso 2D}
+
+En el caso bidimensional, la ecuaci\'on de Laplace se discretiza como:
+
+\begin{equation}
+\frac{T_{i+1,j}-2T_{i,j}+T_{i-1,j}}{(\Delta x)^2}
++
+\frac{T_{i,j+1}-2T_{i,j}+T_{i,j-1}}{(\Delta y)^2}
+=0.
+\end{equation}
+
+Separando los t\'erminos en la direcci\'on $x$:
+
+\begin{equation}
+\frac{1}{(\Delta x)^2}T_{i-1,j}
+-2\left(\frac{1}{(\Delta x)^2}+\frac{1}{(\Delta y)^2}\right)T_{i,j}
++\frac{1}{(\Delta x)^2}T_{i+1,j}
+=-\frac{T_{i,j-1}+T_{i,j+1}}{(\Delta y)^2}.
+\end{equation}
+
+Esta expresi\'on genera un sistema tridiagonal por cada linea horizontal
+$j$:
+
+\begin{equation}
+a_i^{(x)}T_{i-1,j}+b_i^{(x)}T_{i,j}+c_i^{(x)}T_{i+1,j}=r_i^{(x)}.
+\end{equation}
+
+Los coeficientes usados son:
+
+\begin{align}
+a_i^{(x)} &= \frac{1}{(\Delta x)^2}, \\
+b_i^{(x)} &= -2\left(\frac{1}{(\Delta x)^2}+\frac{1}{(\Delta y)^2}\right), \\
+c_i^{(x)} &= \frac{1}{(\Delta x)^2}, \\
+r_i^{(x)} &= -\frac{T_{i,j-1}+T_{i,j+1}}{(\Delta y)^2}.
+\end{align}
+
+De forma an\'aloga, separando los t\'erminos en la direcci\'on $y$:
+
+\begin{equation}
+\frac{1}{(\Delta y)^2}T_{i,j-1}
+-2\left(\frac{1}{(\Delta x)^2}+\frac{1}{(\Delta y)^2}\right)T_{i,j}
++\frac{1}{(\Delta y)^2}T_{i,j+1}
+=-\frac{T_{i-1,j}+T_{i+1,j}}{(\Delta x)^2}.
+\end{equation}
+
+Esto produce sistemas tridiagonales verticales:
+
+\begin{equation}
+a_j^{(y)}T_{i,j-1}+b_j^{(y)}T_{i,j}+c_j^{(y)}T_{i,j+1}=r_j^{(y)},
+\end{equation}
+
+con:
+
+\begin{align}
+a_j^{(y)} &= \frac{1}{(\Delta y)^2}, \\
+b_j^{(y)} &= -2\left(\frac{1}{(\Delta x)^2}+\frac{1}{(\Delta y)^2}\right), \\
+c_j^{(y)} &= \frac{1}{(\Delta y)^2}, \\
+r_j^{(y)} &= -\frac{T_{i-1,j}+T_{i+1,j}}{(\Delta x)^2}.
+\end{align}
+
+El proceso iterativo se detiene cuando el cambio entre dos iteraciones
+consecutivas es menor que una tolerancia prescrita. El residuo usado es:
+
+\begin{equation}
+R^{(k)}=
+\left[
+\sum_{i=1}^{n_x}\sum_{j=1}^{n_y}
+\left(T_{i,j}^{(k)}-T_{i,j}^{(k-1)}\right)^2
+\right]^{1/2}.
+\end{equation}
+
+El criterio de convergencia es:
+
+\begin{equation}
+R^{(k)}<\varepsilon.
+\end{equation}
+
+\section{Metodologia computacional secuencial del caso 2D}
+
+El algoritmo secuencial para el caso 2D se implementa en el programa 
+\texttt{secuencial\_calor1D\_calor2D.f90}. Se resuelve iterativamente el 
+sistema de ecuaciones generado por la discretización bidimensional de la 
+ecuación de Laplace. Se usa el mismo algoritmo de Thomas para resolver los 
+sistemas tridiagonales en cada dirección. El programa se ejecuta con 
+\verb|./calor2D| y los resultados se guardan en archivos de texto para su 
+posterior análisis.
+
+La versi\'on paralela distribuye los barridos independientes entre hilos de
+OpenMP. Si $t_p$ es el tiempo de ejecuci\'on usando $p$ hilos y $t_1$ es el
+tiempo de referencia secuencial, el speedup se calcula como:
+
+\begin{equation}
+S_p=\frac{t_1}{t_p}.
+\end{equation}
+
+La eficiencia paralela mide qu\'e fracci\'on del uso ideal de los $p$ hilos se
+aprovecha:
+
+\begin{equation}
+E_p=\frac{S_p}{p}.
+\end{equation}
+
+El caso ideal corresponde a:
+
+\begin{equation}
+S_p^{ideal}=p,
+\quad
+E_p^{ideal}=1.
+\end{equation}
+
+\section{Resultados}
+
+Las tablas de rendimiento se guardan en \texttt{docs/tables/} y las figuras en
+\texttt{docs/figures/}. Para cada n\'umero de hilos $p$, el tiempo reportado se
+puede obtener como el promedio de varias corridas:
+
+\begin{equation}
+\overline{t}_p=\frac{1}{N}\sum_{\ell=1}^{N}t_{p,\ell},
+\end{equation}
+
+donde $N$ es el n\'umero de repeticiones y $t_{p,\ell}$ es el tiempo medido en
+la corrida $\ell$ usando $p$ hilos. Con este promedio, el speedup experimental
+queda:
+
+\begin{equation}
+S_p^{real}=\frac{\overline{t}_1}{\overline{t}_p}.
+\end{equation}
+
+La eficiencia experimental se calcula como:
+
+\begin{equation}
+E_p^{real}=\frac{S_p^{real}}{p}
+=\frac{\overline{t}_1}{p\,\overline{t}_p}.
+\end{equation}
+
+Para comparar con la aceleraci\'on ideal se usa:
+
+\begin{equation}
+\Delta S_p = S_p^{ideal}-S_p^{real}=p-S_p^{real}.
+\end{equation}
+
+Una diferencia $\Delta S_p$ cercana a cero indica que la ejecuci\'on paralela se
+aproxima al comportamiento ideal. Cuando $\Delta S_p$ crece, la eficiencia baja
+por costos de sincronizaci\'on, acceso a memoria, regiones no paralelas o
+desbalance entre hilos.
+
+\subsection{Comparaci\'on final con el c\'odigo de referencia}
+
+Se compar\'o la versi\'on paralela desarrollada en \texttt{paralelo/src/} contra
+el c\'odigo de referencia proporcionado en \texttt{paralelo/reference/}. Los
+archivos de referencia no fueron modificados. Para reducir el efecto de
+arranques fr\'ios y procesos de fondo, se us\'o una corrida de calentamiento por
+n\'umero de hilos y se report\'o la mediana de seis corridas medidas.
+
+Para aislar el efecto del paralelismo bajo el mismo comportamiento num\'erico,
+en la versi\'on desarrollada se reprodujeron dos errores presentes en
+\texttt{reference/}: (i) la condici\'on de frontera inferior del barrido en
+direcci\'on $y$ se dej\'o con la misma formulaci\'on incorrecta, y (ii) el corte
+por convergencia basado en residuo se mantuvo desactivado, forzando la
+ejecuci\'on hasta \texttt{itermax}.
+
+La comparaci\'on debe leerse como una comparaci\'on de comportamiento paralelo en
+la misma m\'aquina, no como igualdad estricta de carga num\'erica: ambas versiones 
+usan una malla de $480\times 240$.
+
+\begin{table}[H]
+\centering
+\caption{Comparaci\'on de tiempos y aceleraci\'on en la misma m\'aquina.}
+\label{tab:comparacion-speedup-final}
+\begin{tabular}{rrrrr}
+\toprule
+Hilos & $t_{\mathrm{nuestra}}$ [s] & $S_{\mathrm{nuestra}}$ &
+$t_{\mathrm{ref}}$ [s] & $S_{\mathrm{ref}}$ \\
+\midrule
+1 & 40.466 & 1.000 & 36.954 & 1.000 \\
+2 & 21.829 & 1.854 & 21.855 & 1.691 \\
+3 & 15.465 & 2.617 & 15.736 & 2.348 \\
+4 & 13.534 & 2.990 & 14.136 & 2.614 \\
+5 & 12.845 & 3.150 & 10.911 & 3.387 \\
+6 & 11.342 & 3.568 &  9.832 & 3.759 \\
+7 &  8.554 & 4.731 &  8.890 & 4.157 \\
+8 &  8.102 & 4.994 & 10.386 & 3.558 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.78\textwidth]{comparacion_speedup_final.png}
+\caption{Curvas de aceleraci\'on de la versi\'on desarrollada y la referencia.}
+\label{fig:comparacion-speedup-final}
+\end{figure}
+
+
+\section{Conclusiones}
+
+
+
+\bibliographystyle{plain}
+\bibliography{bib/references}
+
+\end{document}
