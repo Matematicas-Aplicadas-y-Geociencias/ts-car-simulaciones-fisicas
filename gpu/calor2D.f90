@@ -12,7 +12,7 @@ Program Calor2D
   !
   ! Iteradores y tamaño del problema
   !
-  integer :: ii, jj, iter
+  integer :: ii, jj, iter, k
   !
   ! Variables del dominio computacional
   !
@@ -28,8 +28,9 @@ Program Calor2D
   double precision :: tt(nx*ny,2)     ! vector de incognitas, 1 para la iteraci'on actual y 2 para la anterior
   double precision :: resid_tt(nx,ny) ! vector de residuo
   double precision :: tx(nx),ty(ny) ! vectores de incognitas 1D
-  double precision :: r(nx*ny)   ! vector de resultados del s. ecuaciones
+  double precision :: rr(nx*ny)   ! vector de resultados del s. ecuaciones
   double precision :: cfx(nx,2), cfy(ny,2)! vector de condiciones de frontera
+  integer :: ind_in, ind_f  !indices de segmentos de la matriz
   !
   double precision :: aa(nx*ny), bb(nx*ny), cc(nx*ny) ! Variables para almacenar
   !                                          ! matriz tridiagonal sobredimensionada
@@ -64,7 +65,7 @@ Program Calor2D
   bb(:)   = 0.d0
   cc(:)   = 0.d0
   rr(:)   = 0.d0
-  tt(:,:,:) = 0.d0
+  tt(:,:) = 0.d0
   !
   ! Condiciones de frontera en direcci'on x
   !
@@ -101,13 +102,16 @@ Program Calor2D
      !
      !$omp parallel do default(none) &
      !$omp shared(  deltax, deltay, tt, cfx) &
-     !$omp private( ax, bx, cx, rx, tx )
+     !$omp private( aa, bb, cc, rr, tx,ind_in,ind_f)
      barrido_y: do jj = 2, ny-1
         !
         ! Es posible combinar directivas de openmp, por ejemplo,
         ! si necesitamos una regi'on paralela unicamente para un bucle,
         ! podemos combinar "parallel" con "do"
         !
+        ind_in = (jj-1)*nx + 1
+        ind_f  = jj*nx
+
         ensambla_tri_x: do ii = 2, nx-1
 
            aa((jj-1)*nx+ii) = 1.d0/(deltax*deltax)
@@ -125,20 +129,20 @@ Program Calor2D
         cc((jj-1)*nx+1)     = 0.d0
         rr((jj-1)*nx+1)     = cfx(jj,1)
         !
-        aa((jj-1)*nx+nx)    = 0.d0
-        bb((jj-1)*nx+nx)    = 1.d0
-        cc((jj-1)*nx+nx)    = 0.d0 ! no se usa en los c'alculos
-        rr((jj-1)*nx+nx)    = cfx(jj,2)
+        aa((jj)*nx)    = 0.d0
+        bb((jj)*nx)    = 1.d0
+        cc((jj)*nx)    = 0.d0 ! no se usa en los c'alculos
+        rr((jj)*nx)    = cfx(jj,2)
         !
         ! Resolver el problema algebraico
         !
-        call tri(ax,bx,cx,rx,tx,nx)
+        call tri(aa(ind_in:ind_f),bb(ind_in:ind_f),cc(ind_in:ind_f),rr(ind_in:ind_f),tx,nx)
         !
         ! Actualizar la temperatura de la placa
         !
         do ii = 1, nx
            
-           tt((jj-1)*nx+ii,1) = tx(ii)
+           tt((ii-1)*ny+jj,1) = tx(ii)
            
         end do
         !
@@ -150,44 +154,48 @@ Program Calor2D
      ! Paralelizamos el barrido en la direcci'on x en bandas
      ! compuestas por grupos de l'ineas, observamos que si usamos pocas
      ! l'ineas tenemos una aceleraci'on pobre o ausente
-     !
+     ind_in = 0
+     ind_f  = 0
      !$omp parallel do default(none) &
      !$omp shared(  deltax, deltay, tt, cfy) &
-     !$omp private( ay, by, cy, ry, ty )
+     !$omp private( aa, bb, cc, rr, ty,ind_in,ind_f)
      barrido_x: do ii = 2, nx-1
+       ind_in = (ii-1)*ny + 1
+       ind_f  = ii*ny
+
 
         ensambla_tri_y: do jj = 2, ny-1
 
-           aa((jj-1)*nx+ii) = 1.d0/(deltay*deltay)
-           bb((jj-1)*nx+ii) =-2.d0*(1.d0/(deltax*deltax)+ 1.d0/(deltay*deltay))
-           cc((jj-1)*nx+ii) = 1.d0/(deltay*deltay)
-           rr((jj-1)*nx+ii) =-1.d0/(deltax*deltax)*tt((jj-1)*nx+ii-1,1)-1.d0/(deltax*deltax)*&
-                tt((jj-1)*nx+ii+1,1)
+           aa((ii-1)*ny+jj)  = 1.d0/(deltay*deltay)
+           bb((ii-1)*ny+jj) =-2.d0*(1.d0/(deltax*deltax)+ 1.d0/(deltay*deltay))
+           cc((ii-1)*ny+jj) = 1.d0/(deltay*deltay)
+           rr((ii-1)*ny+jj) =-1.d0/(deltax*deltax)*tt((ii-2)*ny+jj,1)-1.d0/(deltax*deltax)*&
+                tt((ii)*ny+jj,1)
            
         end do ensambla_tri_y
         !
         ! Impone cond. frontera
         !
-        aa((1-1)*nx+ii)     = 0.d0 ! no se usa en los c'alculos
-        bb((1-1)*nx+ii)     = 1.d0
-        cc((1-1)*nx+ii)     = 0.d0
-        rr((1-1)*nx+ii)     = cfy(ii,1)
+        aa((ii-1)*ny+1)     = 0.d0 ! no se usa en los c'alculos
+        bb((ii-1)*ny+1)     = 1.d0
+        cc((ii-1)*ny+1)     = 0.d0
+        rr((ii-1)*ny+1)     = cfy(ii,1)
         !
-        aa((ny-1)*nx+ii)    =-1.d0
-        bb(ny-1)*nx+ii)    = 1.d0
-        cc(ny-1)*nx+ii)    = 0.d0 ! no se usa en los c'alculos
-        rr(ny-1)*nx+ii)    = cfy(ii,2)
+        aa(ii*ny)    =-1.d0
+        bb(ii*ny)    = 1.d0
+        cc(ii*ny)    = 0.d0 ! no se usa en los c'alculos
+        rr(ii*ny)    = cfy(ii,2)
         !
         ! Resolver el problema algebraico
         !
-        call tri(ay,by,cy,ry,ty,ny)
+        call tri(aa(ind_in:ind_f),bb(ind_in:ind_f),cc(ind_in:ind_f),rr(ind_in:ind_f),ty,ny)
         !
         !
         ! Actualizar la temperatura de la placa
         !
         do jj = 1, ny
            
-           tt((jj-1)*nx+ii,1) = ty(jj)
+           tt((ii-1)*ny+jj,1) = ty(jj)
            
         end do
         !
@@ -201,7 +209,7 @@ Program Calor2D
      do ii = 2, nx-1
         do jj = 2, ny-1
            
-           residuo = residuo + (tt(ii,jj,1)-tt(ii,jj,2))*(tt(ii,jj,1)-tt(ii,jj,2))
+           residuo = residuo + (tt((jj-1)*nx+ii,1)-tt((jj-1)*nx+ii,2))*(tt((jj-1)*nx+ii,1)-tt((jj-1)*nx+ii,2))
            
         end do
      end do
@@ -223,8 +231,8 @@ Program Calor2D
   ! el archivo queda desordenado y gnuplot (y otros graficadores) no
   ! los procesan bien.
   !
-  archivo = 'salida.vtk'
-  !
+  !archivo = 'salida.vtk'
+  write(*,*),tt
   ! call postproceso_vtk(xx,yy,tt(1:nx,1:ny,1), resid_tt ,archivo)
   !
 end Program Calor2D
