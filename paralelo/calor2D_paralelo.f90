@@ -93,14 +93,14 @@ Program Calor2D
      !
      ! Inicializamos el valor de la iteraci'on anterior
      !
-     !$omp parallel do default(none) &
-     !$omp shared(tt) 
+     ! $omp parallel do default(none) &
+     ! $omp shared(tt) 
      copia_anterior: do jj = 1, ny
 		do ii = 1, nx
 			tt(ii,jj,2) = tt(ii,jj,1)
 		end do
 	 end do copia_anterior
-	 !$omp end parallel do
+	 ! $omp end parallel do
      !
      !---------------------------------------------------------------
      !
@@ -206,14 +206,14 @@ Program Calor2D
      ! Criterio de convergencia
      !
      residuo = 0.d0
-     !$omp parallel do default(none) &
-     !$omp shared(tt,residuo)
+     ! $omp parallel do default(none) &
+     ! $omp shared(tt,residuo)
      do jj = 1, ny
         do ii = 1, nx
            residuo = residuo + (tt(ii,jj,1)-tt(ii,jj,2))*(tt(ii,jj,1)-tt(ii,jj,2))
         end do
      end do
-     !$omp end parallel do 
+     ! $omp end parallel do 
      !
      residuo = sqrt(residuo)
      !

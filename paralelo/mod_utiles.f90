@@ -34,8 +34,8 @@ contains
     !
     ! Se recorren los puntos de la malla
     !
-    !$omp parallel do default(none) &
-    !$omp shared(resid, temp, deltax, deltay, sx, sy)
+    ! $omp parallel do default(none) &
+    ! $omp shared(resid, temp, deltax, deltay, sx, sy)
     do jj = 2, sy-1
        !
        do ii = 2, sx-1
@@ -47,7 +47,7 @@ contains
        end do
        !
     end do
-    !$omp end parallel do 
+    ! $omp end parallel do 
     
   end Subroutine residuo_temp
   !
