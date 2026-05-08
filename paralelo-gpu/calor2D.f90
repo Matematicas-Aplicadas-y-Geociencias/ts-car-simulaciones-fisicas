@@ -28,7 +28,7 @@ Program Calor2D
   double precision :: xx(nx), yy(ny)  ! variables de la malla
   double precision :: tt(nx,ny,2)     ! vector de incognitas, 1 para la iteraci'on actual y 2 para la anterior
   double precision :: resid_tt(nx,ny) ! vector de residuo
-  double precision :: tx(nx), ty(ny)  ! vectores de incognitas 1D
+  double precision :: tx(nx), ty(nx*ny)  ! vectores de incognitas 1D
   double precision :: rx(nx),ry(ny)   ! vector de resultados del s. ecuaciones
   double precision :: cfx(ny,2),cfy(nx,2) ! vector de condiciones de frontera
   !
@@ -155,15 +155,11 @@ Program Calor2D
         ! Resolver el problema algebraico
         !
         call tri(aa(indicex(1,jj):indicex(nx,jj)),bb(indicex(1,jj):indicex(nx,jj)),&
-             cc(indicex(1,jj):indicex(nx,jj)),rr(indicex(1,jj):indicex(nx,jj)),tx,nx)
+             cc(indicex(1,jj):indicex(nx,jj)),rr(indicex(1,jj):indicex(nx,jj)),&
+             tt(1:nx,jj,1),nx)
         !
         ! Actualizar la temperatura de la placa
         !
-        do ii = 1, nx
-           
-           tt(ii,jj,1) = tx(ii)
-           
-        end do
         !
      end do inversor_y
      !$omp end parallel do
@@ -173,10 +169,13 @@ Program Calor2D
      ! compuestas por grupos de l'ineas, observamos que si usamos pocas
      ! l'ineas tenemos una aceleraci'on pobre o ausente
      !
+     ! Si estamos usando indicex significa que estamos usando column-mayor
+     ! por como guarda el coódigo
+     !
+     !
      !$omp parallel do default(none) &
      !$omp shared(  deltax, deltay, tt, cfy, &
-     !$omp aa, bb, cc, rr) &
-     !$omp private( ty )
+     !$omp aa, bb, cc, rr)
      barrido_x: do ii = 2, nx-1
 
         ensambla_tri_y: do jj = 2, ny-1
@@ -210,20 +209,20 @@ Program Calor2D
      ! Resolvemos los problemas de matrices tridiagonales a la vez
      !
      !$omp parallel do default(none) &
-     !$omp shared( tt, aa, bb, cc, rr ) &
-     !$omp private( ty )
+     !$omp shared( tt, aa, bb, cc, rr, ty ) 
      inversor_x: do ii = 2, nx-1
         !
         ! Resolver el problema algebraico
         !
         call tri(aa(indicey(ii,1):indicey(ii,ny)),bb(indicey(ii,1):indicey(ii,ny)),&
-             cc(indicey(ii,1):indicey(ii,ny)),rr(indicey(ii,1):indicey(ii,ny)),ty,ny)
+             cc(indicey(ii,1):indicey(ii,ny)),rr(indicey(ii,1):indicey(ii,ny)),&
+             ty(indicey(ii,1):indicey(ii,ny)),ny)
         !
         ! Actualizar la temperatura de la placa
         !
         do jj = 1, ny
            
-           tt(ii,jj,1) = ty(jj)
+           tt(ii,jj,1) = ty(indicey(ii,jj))
            
         end do
         !
