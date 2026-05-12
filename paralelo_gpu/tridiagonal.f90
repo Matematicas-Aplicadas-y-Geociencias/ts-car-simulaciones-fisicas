@@ -6,6 +6,8 @@ subroutine tri(a,b,c,r,u,n)
   ! elementos a, b, c
   ! y devuelve el valor de u
   !
+  use openacc
+  !
   implicit none
   !
   integer,          intent(in)    :: n
