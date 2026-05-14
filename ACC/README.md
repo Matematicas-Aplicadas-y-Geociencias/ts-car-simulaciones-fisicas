@@ -14,8 +14,11 @@ This tree groups the sequential baseline and ACC/GPU-oriented sources for the 2D
   - `tridiagonal.f90`
 - `ejemplos/`
   - small ACC examples (currently `ejemploArreglo.f90`)
+- `proyecto/`
+  - report copy for ACC planning:
+    - `report.tex`
+    - `report.pdf`
 
 ## Notes
 
-- This structure is intentionally non-destructive: original folders remain unchanged.
-- Documentation artifacts in `docs/` are preserved and not relocated.
+- This workspace includes sequential base + ACC/GPU variants and a local report copy for future ACC-specific evolution.

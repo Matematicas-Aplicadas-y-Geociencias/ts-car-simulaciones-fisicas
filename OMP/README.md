@@ -17,8 +17,11 @@ This tree groups the sequential and OpenMP-oriented sources for the 2D heat solv
   - OpenMP learning examples (`*.f90`)
 - `scripts/`
   - Benchmark and helper scripts used in OMP flow
+- `proyecto/`
+  - Consolidated legacy project tree moved from repository root.
+  - Includes: `docs/`, `paralelo/`, `secuencial/`, `scripts/`, `resources/`, `misc/`, `acc_legacy/`.
+  - Main report currently used: `proyecto/docs/report.tex`.
 
 ## Notes
 
-- This structure is intentionally non-destructive: original folders remain unchanged.
-- Documentation artifacts in `docs/` are preserved and not relocated.
+- Root-level cleanup moved former top-level directories into `proyecto/` to keep repository root minimal.
