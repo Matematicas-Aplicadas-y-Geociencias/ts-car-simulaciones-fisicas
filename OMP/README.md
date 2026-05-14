@@ -19,7 +19,7 @@ This tree groups the sequential and OpenMP-oriented sources for the 2D heat solv
   - Benchmark and helper scripts used in OMP flow
 - `proyecto/`
   - Consolidated legacy project tree moved from repository root.
-  - Includes: `docs/`, `paralelo/`, `secuencial/`, `scripts/`, `resources/`, `misc/`, `acc_legacy/`.
+  - Includes: `docs/`, `paralelo/`, `secuencial/`, `scripts/`, `resources/`, `misc/`.
   - Main report currently used: `proyecto/docs/report.tex`.
 
 ## Notes

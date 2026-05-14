@@ -18,6 +18,7 @@ This tree groups the sequential baseline and ACC/GPU-oriented sources for the 2D
   - report copy for ACC planning:
     - `report.tex`
     - `report.pdf`
+    - `acc_legacy/` (respaldo histórico)
 
 ## Notes
 
