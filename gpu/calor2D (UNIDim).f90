@@ -5,6 +5,7 @@ Program Calor2D
   use utiles, only : postproceso_vtk
   use utiles, only : residuo_temp
   use utiles, only : nx, ny, itermax
+  use utiles, only : indicex, indicey
   !
   Implicit none
   !
@@ -27,7 +28,6 @@ Program Calor2D
   double precision :: xx(nx), yy(ny)  ! variables de la malla
   double precision :: tt(nx*ny,2)     ! vector de incognitas, 1 para la iteraci'on actual y 2 para la anterior
   double precision :: resid_tt(nx,ny) ! vector de residuo
-  double precision :: tx(nx),ty(ny) ! vectores de incognitas 1D
   double precision :: rr(nx*ny)   ! vector de resultados del s. ecuaciones
   double precision :: cfx(nx,2), cfy(ny,2)! vector de condiciones de frontera
   integer :: ind_in, ind_f  !indices de segmentos de la matriz
@@ -88,9 +88,18 @@ Program Calor2D
   bucle_iteraciones: do iter = 1, itermax
      !
      ! Inicializamos el valor de la iteraci'on anterior
+    !$omp parallel do
+     do ii = 2, nx-1
+     	do jj= 2. ny-1
+           tr(indicey(ii,jj),1) = tt(indicex(ii,jj),1)
+        end do
+     end do
+     !$omp end parallel do
+     
      !$omp parallel do
      do k = 2, (ny-1)*(nx-1)
            tt(k,2) = tt(k,1)
+           tr(k,2) = tr(k,1)
      end do
      !$omp end parallel do
      !
@@ -101,9 +110,9 @@ Program Calor2D
      ! l'ineas tenemos una aceleraci'on pobre o ausente
      !
      !$omp parallel do default(none) &
-     !$omp shared( deltax, deltay, tt, cfx, &
+     !$omp shared( deltax, deltay, tt, tr, cfx, &
      !$omp aa, bb, cc, rr) &
-     !$omp private( tx,ind_in,ind_f)
+     !$omp private(ind_in,ind_f)
      barrido_y: do jj = 2, ny-1
         !
         ! Es posible combinar directivas de openmp, por ejemplo,
@@ -136,18 +145,16 @@ Program Calor2D
         rr((jj)*nx)    = cfx(jj,2)
         !
         ! Resolver el problema algebraico
+    end barrido_y
+    !$omp end parallel do
+    
+    !$omp parallel do default(none) &
+    !$omp shared( tt, aa, bb, cc, rr ) &
+    inversor_y: do jj=2, ny-1
+    	call tri(aa(ind_in:ind_f),bb(ind_in:ind_f),cc(ind_in:ind_f),rr(ind_in:ind_f),tt(ind_in:ind_f),nx)
+	
         !
-        call tri(aa(ind_in:ind_f),bb(ind_in:ind_f),cc(ind_in:ind_f),rr(ind_in:ind_f),tx,nx)
-        !
-        ! Actualizar la temperatura de la placa
-        !
-        do ii = 1, nx
-           
-           tt((ii-1)*ny+jj,1) = tx(ii)
-           
-        end do
-        !
-     end do barrido_y
+     end do inversor_y
      !$omp end parallel do
      !
      !---------------------------------------------------------------
@@ -160,7 +167,7 @@ Program Calor2D
      !$omp parallel do default(none) &
      !$omp shared(  deltax, deltay, tt, cfy, &
      !$omp aa, bb, cc, rr) &
-     !$omp private( aa, bb, cc, rr, ty,ind_in,ind_f)
+     !$omp private(ind_in,ind_f)
      barrido_x: do ii = 2, nx-1
        ind_in = (ii-1)*ny + 1
        ind_f  = ii*ny
@@ -187,21 +194,20 @@ Program Calor2D
         bb(ii*ny)    = 1.d0
         cc(ii*ny)    = 0.d0 ! no se usa en los c'alculos
         rr(ii*ny)    = cfy(ii,2)
-        !
+     end do barrido_x
+     !$omp end parallel do
+        
         ! Resolver el problema algebraico
-        !
-        call tri(aa(ind_in:ind_f),bb(ind_in:ind_f),cc(ind_in:ind_f),rr(ind_in:ind_f),ty,ny)
+     !$omp parallel do default(none) &
+     !$omp shared( tt, aa, bb, cc, rr, tr)
+     inversor_x: do ii = 2, nx-1
+        call tri(aa(ind_in:ind_f),bb(ind_in:ind_f),cc(ind_in:ind_f),rr(ind_in:ind_f),tt(ind_in:ind_f),ny)
         !
         !
         ! Actualizar la temperatura de la placa
         !
-        do jj = 1, ny
-           
-           tt((ii-1)*ny+jj,1) = ty(jj)
-           
-        end do
-        !
-     end do barrido_x
+
+     end do inversor_x
      !$omp end parallel do
      !
      ! Criterio de convergencia

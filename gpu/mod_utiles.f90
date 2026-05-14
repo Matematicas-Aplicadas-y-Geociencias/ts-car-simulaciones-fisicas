@@ -50,6 +50,34 @@ contains
   !
   !-----------------------------------------
   !
+  ! Funci\'on para dar el indice 1D de un arreglo en formato column major
+  ! usando la relaci\'on (ii,jj) --> ii+nx(jj-1)
+  !
+  function indicex(ii,jj)
+    !
+    integer             :: indicex
+    !
+    integer, intent(in) :: ii, jj
+    !
+    indicex = ii + nx*(jj-1)
+    !
+  end function indicex
+  !
+  ! Funci\'on para dar el indice 1D de un arreglo en formato row major
+  ! usando la relaci\'on (ii,jj) --> jj+ny(ii-1)
+  !
+  function indicey(ii,jj)
+    !
+    integer             :: indicey
+    !
+    integer, intent(in) :: ii, jj
+    !
+    indicey = jj + ny*(ii-1)
+    !
+  end function indicey
+  !  
+  !-----------------------------------------
+  !
   ! Subrutina de postproceso de archivos vtk
   !
   subroutine postproceso_vtk(&
