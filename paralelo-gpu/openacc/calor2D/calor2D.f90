@@ -1,6 +1,6 @@
 Program Calor2D
   !
-  use omp_lib
+  use openacc
   !
   use utiles, only : postproceso_vtk
   use utiles, only : residuo_temp
@@ -102,10 +102,7 @@ Program Calor2D
      ! compuestas por grupos de l'ineas, observamos que si usamos pocas
      ! l'ineas tenemos una aceleraci'on pobre o ausente
      !
-     !$omp parallel do default(none) &
-     !$omp shared(  deltax, deltay, tt, cfx, &
-     !$omp aa, bb, cc, rr ) &
-     !$omp private( tx )
+     !$acc parallel loop
      barrido_y: do jj = 2, ny-1
         !
         ! Es posible combinar directivas de openmp, por ejemplo,
@@ -138,7 +135,7 @@ Program Calor2D
         rr(indicex(nx,jj))     = cfx(jj,2)
         !
      end do barrido_y
-     !$omp end parallel do
+     !$acc end parallel loop
      !
      ! Resolvemos los problemas de matrices tridiagonales a la vez
      !

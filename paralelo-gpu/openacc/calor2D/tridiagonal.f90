@@ -8,6 +8,8 @@ subroutine tri(a,b,c,r,u,n)
   !
   implicit none
   !
+  !$acc routine
+  !
   integer,          intent(in)    :: n
   double precision, intent(in)    :: a(n),c(n)
   double precision, intent(inout) :: b(n),r(n)

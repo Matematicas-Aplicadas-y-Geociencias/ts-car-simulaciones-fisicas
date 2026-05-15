@@ -53,6 +53,8 @@ contains
   !
   function indicex(ii,jj)
     !
+    !$acc routine
+    !
     integer             :: indicex
     !
     integer, intent(in) :: ii, jj
@@ -65,6 +67,8 @@ contains
   ! usando la relaci\'on (ii,jj) --> jj+ny(ii-1)
   !
   function indicey(ii,jj)
+    !
+    !$acc routine
     !
     integer             :: indicey
     !
