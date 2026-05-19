@@ -19,12 +19,13 @@ import time
 from pathlib import Path
 
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
-CODE_DIR = ROOT_DIR / "src" / "calor2d"
-DOCS_DIR = ROOT_DIR.parent / "docs"
-TABLES_DIR = DOCS_DIR / "tables"
-FIGURES_DIR = DOCS_DIR / "figures"
-BIN_DIR = ROOT_DIR / "bin"
+OMP_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = OMP_DIR.parent
+CODE_DIR = OMP_DIR / "paralelo" / "calor2D"
+PROJECT_DIR = REPO_ROOT / "PROYECTO"
+TABLES_DIR = PROJECT_DIR / "tables"
+FIGURES_DIR = PROJECT_DIR / "figures"
+BIN_DIR = OMP_DIR / "build"
 
 
 def parse_args() -> argparse.Namespace:
@@ -39,7 +40,7 @@ def parse_args() -> argparse.Namespace:
         default=str(CODE_DIR),
         help=(
             "Carpeta donde viven los archivos fuente y donde se ejecutara "
-            "el binario. Default: paralelo/src/calor2d."
+            "el binario. Default: OMP/paralelo/calor2D."
         ),
     )
     parser.add_argument(
@@ -84,12 +85,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-prefix",
         default="aceleracion_ideal_vs_real",
-        help="Prefijo para los archivos de salida en docs/tables y docs/figures.",
+        help="Prefijo para los archivos de salida en PROYECTO/tables y PROYECTO/figures.",
     )
     parser.add_argument(
         "--exe-name",
         default="calor2D_bench",
-        help="Nombre del ejecutable temporal a generar dentro de paralelo/bin.",
+        help="Nombre del ejecutable temporal a generar dentro de OMP/build/.",
     )
     parser.add_argument(
         "--plot-title",

@@ -1,25 +1,20 @@
-# ACC Workspace
+# ACC
 
-This tree groups the sequential baseline and ACC/GPU-oriented sources for the 2D heat solver.
+## `paralelo/calor2D/`
 
-## Layout
+Fuentes OpenACC/GPU (`calor2D_acc.f90`, `calor2D_acc_utils.f90`, etc.).
 
-- `secuencial/calor2D/`
-  - `calor2D.f90`
-  - `tridiagonal.f90`
-- `paralelo/calor2D/`
-  - `calor2D.f90`
-  - `calor2D_por_fila.f90`
-  - `mod_utiles.f90`
-  - `tridiagonal.f90`
-- `ejemplos/`
-  - small ACC examples (currently `ejemploArreglo.f90`)
-- `proyecto/`
-  - report copy for ACC planning:
-    - `report.tex`
-    - `report.pdf`
-    - `acc_legacy/` (respaldo histórico)
+## `scripts/`
 
-## Notes
+`benchmark_acc_thomas.py` — compila en `build/`, escribe en `PROYECTO/`.
 
-- This workspace includes sequential base + ACC/GPU variants and a local report copy for future ACC-specific evolution.
+```bash
+python3 ACC/scripts/benchmark_acc_thomas.py --nx 60 --ny 30 --itermax 20 --runs 1 --cores 1 2
+```
+
+## `ejemplos/`, `legacy/`
+
+- `ejemplos/` — ejemplos pequeños (`ejemploArreglo.f90`)
+- `legacy/acc_legacy/` — respaldo histórico (no borrar; distinto de `ejemplos/`)
+
+Reporte: `PROYECTO/report.tex`.

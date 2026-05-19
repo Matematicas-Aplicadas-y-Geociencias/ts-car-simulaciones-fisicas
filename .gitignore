@@ -11,31 +11,57 @@
 *.gch
 *.pch
 
-# Linker files
+# Linker / debugger
 *.ilk
-
-# Debugger Files
 *.pdb
 
-# Compiled Dynamic libraries
+# Libraries
 *.so
 *.dylib
 *.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
 *.lai
 *.la
 *.a
 *.lib
 
+# Fortran
+*.mod
+*.smod
+
 # Executables
 *.exe
 *.out
 *.app
-
-# debug information files
 *.dwo
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# Local editor
+.fortls
+debug.log
+
+# LaTeX (PROYECTO/)
+PROYECTO/*.aux
+PROYECTO/*.bbl
+PROYECTO/*.blg
+PROYECTO/*.fdb_latexmk
+PROYECTO/*.fls
+PROYECTO/*.log
+PROYECTO/*.out
+PROYECTO/*.synctex.gz
+PROYECTO/*.toc
+
+# Build / run artifacts
+OMP/build/
+ACC/build/
+ACC/bin/
+SECUENCIAL/calor2D/solucion.dat
+SECUENCIAL/calor2D/*.png
+SECUENCIAL/calor1D/fort.101
+ACC/legacy/**/ejemplo
+ACC/legacy/**/ejemploArreglo

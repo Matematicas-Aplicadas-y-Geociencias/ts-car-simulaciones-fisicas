@@ -1,0 +1,25 @@
+# Generado en disco — mapa real del repositorio (May 2025)
+# Si no ves estas carpetas en el explorador: F5 o recargar ventana.
+
+FUNCIONES_GITHUB/
+├── SECUENCIAL/calor1D/     calor1D.f90, tridiagonal.f90, graph_calor1D.py
+├── SECUENCIAL/calor2D/     calor2D.f90, tridiagonal.f90, nano_plot.py
+├── OMP/paralelo/calor2D/   OpenMP (calor2D_parallel.f90, ...)
+├── OMP/paralelo/openmp_basics/
+├── OMP/scripts/            benchmark_aceleracion.py, plot_comparacion_speedup.py
+├── OMP/build/              ejecutables locales (vacío)
+├── ACC/paralelo/calor2D/   OpenACC
+├── ACC/scripts/            benchmark_acc_thomas.py
+├── ACC/ejemplos/           ejemploArreglo.f90
+├── ACC/legacy/acc_legacy/  respaldo histórico
+├── ACC/build/
+├── REFERENCIA/             snapshot origin/main (NO editar)
+└── PROYECTO/               report.tex, bib/, figures/, tables/, logs/
+
+NO existen ya en disco:
+  OMP/proyecto/
+  ACC/proyecto/
+  OMP/secuencial/  ACC/secuencial/
+  OMP/scripts/ (viejo en raíz OMP antes de proyecto — ahora es OMP/scripts/ con benchmarks)
+
+Reporte PDF: PROYECTO/report.pdf (se crea al compilar report.tex)

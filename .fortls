@@ -1,0 +1,16 @@
+{
+  "source_dirs": [
+    "SECUENCIAL/**",
+    "ACC/**",
+    "OMP/**"
+  ],
+  "incremental_sync": true,
+  "lowercase_intrinsics": true,
+  "pp_suffixes": [".F90", ".f90", ".F", ".f"],
+  "include_dirs": [
+    "SECUENCIAL/calor1D",
+    "SECUENCIAL/calor2D",
+    "ACC/paralelo/calor2D",
+    "OMP/paralelo/calor2D"
+  ]
+}

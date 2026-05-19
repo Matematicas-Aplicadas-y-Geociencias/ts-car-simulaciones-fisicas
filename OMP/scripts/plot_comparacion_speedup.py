@@ -12,10 +12,10 @@ import argparse
 from pathlib import Path
 
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
-DOCS_DIR = ROOT_DIR.parent / "docs"
-TABLES_DIR = DOCS_DIR / "tables"
-FIGURES_DIR = DOCS_DIR / "figures"
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+PROJECT_DIR = REPO_ROOT / "PROYECTO"
+TABLES_DIR = PROJECT_DIR / "tables"
+FIGURES_DIR = PROJECT_DIR / "figures"
 
 
 def parse_args() -> argparse.Namespace:

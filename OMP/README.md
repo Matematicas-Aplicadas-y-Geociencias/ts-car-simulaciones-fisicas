@@ -1,27 +1,18 @@
-# OMP Workspace
+# OMP
 
-This tree groups the sequential and OpenMP-oriented sources for the 2D heat solver.
+## `paralelo/calor2D/`
 
-## Layout
+Fuentes OpenMP del solver 2D (`calor2D_parallel.f90`, `calor2D_utils.f90`, `residuo.f90`, etc.).
 
-- `secuencial/calor2D/`
-  - `calor2D.f90`
-  - `tridiagonal.f90`
-- `paralelo/calor2D/`
-  - `calor2D_parallel.f90`
-  - `calor2D_secuencial.f90`
-  - `calor2D_utils.f90`
-  - `residuo.f90`
-  - `tridiagonal.f90`
-- `paralelo/openmp_basics/`
-  - OpenMP learning examples (`*.f90`)
-- `scripts/`
-  - Benchmark and helper scripts used in OMP flow
-- `proyecto/`
-  - Consolidated legacy project tree moved from repository root.
-  - Includes: `docs/`, `paralelo/`, `secuencial/`, `scripts/`, `resources/`, `misc/`.
-  - Main report currently used: `proyecto/docs/report.tex`.
+## `paralelo/openmp_basics/`
 
-## Notes
+Ejemplos introductorios de OpenMP.
 
-- Root-level cleanup moved former top-level directories into `proyecto/` to keep repository root minimal.
+## `scripts/`
+
+- `benchmark_aceleracion.py` — compila en `build/`, escribe en `PROYECTO/`
+- `plot_comparacion_speedup.py`
+
+```bash
+python3 OMP/scripts/benchmark_aceleracion.py --max-threads 8 --runs 10
+```
