@@ -20,11 +20,9 @@ from pathlib import Path
 
 
 OMP_DIR = Path(__file__).resolve().parent.parent
-REPO_ROOT = OMP_DIR.parent
-CODE_DIR = OMP_DIR / "paralelo" / "calor2D"
-PROJECT_DIR = REPO_ROOT / "PROYECTO"
-TABLES_DIR = PROJECT_DIR / "tables"
-FIGURES_DIR = PROJECT_DIR / "figures"
+CODE_DIR = OMP_DIR / "calor2D"
+TABLES_DIR = OMP_DIR / "tables"
+FIGURES_DIR = OMP_DIR / "figures"
 BIN_DIR = OMP_DIR / "build"
 
 
@@ -40,7 +38,7 @@ def parse_args() -> argparse.Namespace:
         default=str(CODE_DIR),
         help=(
             "Carpeta donde viven los archivos fuente y donde se ejecutara "
-            "el binario. Default: OMP/paralelo/calor2D."
+            "el binario. Default: OMP/calor2D."
         ),
     )
     parser.add_argument(
@@ -79,13 +77,27 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--stat",
         choices=["mean", "median", "best"],
-        default="mean",
-        help="Estadistico usado para la tabla: mean, median o best. Default: mean.",
+        default="median",
+        help="Estadistico por punto: mean, median o best. Default: median (robusto a outliers).",
+    )
+    parser.add_argument(
+        "--baseline-runs",
+        type=int,
+        default=0,
+        help=(
+            "Si > 0, calibra t1 solo con 1 hilo (warmups + este numero de corridas) "
+            "antes del barrido; usa --stat sobre esas muestras. Default: 0 (t1 del primer punto)."
+        ),
+    )
+    parser.add_argument(
+        "--save-samples",
+        action="store_true",
+        help="Escribe tiempos crudos por corrida en OMP/tables/<prefix>_samples.txt",
     )
     parser.add_argument(
         "--output-prefix",
         default="aceleracion_ideal_vs_real",
-        help="Prefijo para los archivos de salida en PROYECTO/tables y PROYECTO/figures.",
+        help="Prefijo para salidas en OMP/tables/ y OMP/figures/.",
     )
     parser.add_argument(
         "--exe-name",
@@ -168,6 +180,53 @@ def run_once(code_dir: Path, exe_path: Path, threads: int) -> tuple[float, str]:
     return elapsed, result.stdout.strip()
 
 
+def aggregate(samples: list[float], stat: str) -> float:
+    if stat == "median":
+        return statistics.median(samples)
+    if stat == "best":
+        return min(samples)
+    return statistics.fmean(samples)
+
+
+def measure_point(
+    code_dir: Path,
+    exe_path: Path,
+    threads: int,
+    runs: int,
+    warmups: int,
+    stat: str,
+    label: str,
+) -> tuple[float, list[float]]:
+    for warmup_idx in range(1, warmups + 1):
+        elapsed, summary = run_once(code_dir, exe_path, threads)
+        print(
+            f"[{label} hilos={threads:2d} warmup={warmup_idx:2d}/{warmups}] "
+            f"{elapsed:8.3f} s"
+        )
+        if summary:
+            print(f"  {summary}")
+
+    samples: list[float] = []
+    for run_idx in range(1, runs + 1):
+        elapsed, summary = run_once(code_dir, exe_path, threads)
+        samples.append(elapsed)
+        print(
+            f"[{label} hilos={threads:2d} corrida={run_idx:2d}/{runs}] "
+            f"{elapsed:8.3f} s"
+        )
+        if summary:
+            print(f"  {summary}")
+
+    value = aggregate(samples, stat)
+    if len(samples) >= 2:
+        spread = max(samples) - min(samples)
+        print(
+            f"  muestras=[{', '.join(f'{s:.3f}' for s in samples)}] "
+            f"min={min(samples):.3f} max={max(samples):.3f} delta={spread:.3f}"
+        )
+    return value, samples
+
+
 def benchmark(
     code_dir: Path,
     exe_path: Path,
@@ -177,45 +236,64 @@ def benchmark(
     warmups: int,
     stat: str,
     baseline_time: float | None = None,
+    baseline_runs: int = 0,
+    sample_log: list[str] | None = None,
 ) -> list[tuple[int, float, float]]:
     results: list[tuple[int, float, float]] = []
+    cal_samples: list[float] = []
+
+    if baseline_runs > 0:
+        print(
+            f"Calibrando t1 con 1 hilo: {warmups} warmup(s), "
+            f"{baseline_runs} corrida(s), stat={stat}..."
+        )
+        baseline_time, cal_samples = measure_point(
+            code_dir,
+            exe_path,
+            1,
+            baseline_runs,
+            warmups,
+            stat,
+            "baseline",
+        )
+        if sample_log is not None:
+            sample_log.append(f"# baseline 1 {stat}={baseline_time:.6f}")
+            for idx, sample in enumerate(cal_samples, start=1):
+                sample_log.append(f"baseline 1 {idx} {sample:.6f}")
+        print(f"t1 de referencia para speedup: {baseline_time:.3f} s")
 
     for threads in range(min_threads, max_threads + 1):
-        for warmup_idx in range(1, warmups + 1):
-            elapsed, summary = run_once(code_dir, exe_path, threads)
-            print(
-                f"[hilos={threads:2d} warmup={warmup_idx:2d}/{warmups}] "
-                f"{elapsed:8.3f} s"
-            )
-            if summary:
-                print(f"  {summary}")
-
-        samples: list[float] = []
-        for run_idx in range(1, runs + 1):
-            elapsed, summary = run_once(code_dir, exe_path, threads)
-            samples.append(elapsed)
-            print(
-                f"[hilos={threads:2d} corrida={run_idx:2d}/{runs}] "
-                f"{elapsed:8.3f} s"
-            )
-            if summary:
-                print(f"  {summary}")
-
-        if stat == "median":
-            mean_time = statistics.median(samples)
-        elif stat == "best":
-            mean_time = min(samples)
+        if baseline_runs > 0 and threads == 1 and min_threads == 1:
+            mean_time = baseline_time
+            samples = cal_samples
         else:
-            mean_time = statistics.fmean(samples)
+            mean_time, samples = measure_point(
+                code_dir,
+                exe_path,
+                threads,
+                runs,
+                warmups,
+                stat,
+                "medicion",
+            )
+
         if baseline_time is None:
             baseline_time = mean_time
 
         speedup = baseline_time / mean_time
         results.append((threads, mean_time, speedup))
 
+        if sample_log is not None:
+            sample_log.append(f"# hilos {threads} {stat}={mean_time:.6f} speedup={speedup:.6f}")
+            for idx, sample in enumerate(samples, start=1):
+                sample_log.append(f"{threads} {idx} {sample:.6f}")
+
+        flag = ""
+        if speedup > threads * 1.02:
+            flag = "  *** speedup > hilos (revisar variabilidad de t1 o carga del sistema)"
         print(
             f"{stat} hilos={threads:2d}: {mean_time:.3f} s, "
-            f"aceleracion={speedup:.3f}"
+            f"aceleracion={speedup:.3f}{flag}"
         )
 
     return results
@@ -341,11 +419,18 @@ def main() -> None:
                 "Corre primero desde hilos=1."
             )
 
+    sample_log: list[str] | None = [] if args.save_samples else None
     print(
         f"Ejecutando benchmark de {args.min_threads} a {args.max_threads} hilos, "
         f"{args.runs} corridas por punto, "
-        f"{args.warmups} warmup(s), stat={args.stat}..."
+        f"{args.warmups} warmup(s), stat={args.stat}, "
+        f"baseline_runs={args.baseline_runs}..."
     )
+    env = os.environ.copy()
+    env.setdefault("OMP_PROC_BIND", "true")
+    env.setdefault("OMP_PLACES", "cores")
+    os.environ.update(env)
+
     results = benchmark(
         code_dir,
         exe_path,
@@ -355,9 +440,15 @@ def main() -> None:
         args.warmups,
         args.stat,
         baseline_time=preloaded_baseline,
+        baseline_runs=args.baseline_runs,
+        sample_log=sample_log,
     )
 
     data_path = save_data(results, args.output_prefix, existing=existing)
+    if sample_log is not None:
+        samples_path = TABLES_DIR / f"{args.output_prefix}_samples.txt"
+        samples_path.write_text("\n".join(sample_log) + "\n", encoding="utf-8")
+        print(f"Muestras crudas: {samples_path}")
     print(f"Datos guardados en: {data_path}")
 
     plot_path = save_plot(results, args.output_prefix, args.runs, args.plot_title)
