@@ -107,7 +107,10 @@ Program Calor2D
      ! y resolvemos el problema la misma forma que lo estabamos haciend antes
      ! de forma paralelizada
      ! 
-     !$acc parallel loop collapse(2)
+     !$omp parallel do default(none) &
+     !$omp shared(  deltax, deltay, tt, cfx, &
+     !$omp aa, bb, cc, rr ) &
+     !$omp private( tx )
      barrido_y: do jj = 2, ny-1
         !
         ! Es posible combinar directivas de openmp, por ejemplo,
@@ -140,11 +143,13 @@ Program Calor2D
         rr(indicex(nx,jj))     = cfx(jj,2)
         !
      end do barrido_y
-     !$acc end parallel loop
+     !$omp end parallel do
      !
      ! Resolvemos los problemas de matrices tridiagonales a la vez
      !
-     !$acc parallel loop
+     !$omp parallel do default(none) &
+     !$omp shared( tt, aa, bb, cc, rr ) &
+     !$omp private( tx )
      inversor_y: do jj = 2, ny-1
         !
         ! Resolver el problema algebraico
@@ -157,7 +162,7 @@ Program Calor2D
         !
         !
      end do inversor_y
-     !$acc end parallel loop
+     !$omp end parallel do
      !---------------------------------------------------------------
      !
      ! Paralelizamos el barrido en la direcci'on x en bandas
@@ -168,7 +173,9 @@ Program Calor2D
      ! por como guarda el coódigo
      !
      !
-     !$acc parallel loop
+     !$omp parallel do default(none) &
+     !$omp shared(  deltax, deltay, tt, cfy, &
+     !$omp aa, bb, cc, rr)
      barrido_x: do ii = 2, nx-1
 
         ensambla_tri_y: do jj = 2, ny-1
@@ -197,7 +204,7 @@ Program Calor2D
         rr(indicey(ii,ny))    = cfy(ii,2)
         !
      end do barrido_x
-     !$acc end parallel loop
+     !$omp end parallel do
      !
      ! Resolvemos los problemas de matrices tridiagonales a la vez
      !
