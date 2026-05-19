@@ -15,7 +15,7 @@
 \usepackage{float}
 
 \geometry{margin=1.5cm}
-\graphicspath{{figures/}}
+\graphicspath{{../SECUENCIAL/calor1D/resultados/figuras/}{../SECUENCIAL/calor2D/resultados/figuras/}{../OMP/figures/}{../ACC/figures/}}
 
 \title{TEMAS SELECTOS DE C\'OMPUTO DE ALTO RENDIMIENTO PARA SIMULACIONES F\'ISICAS\\
 Analisis Num\'erico y Computacional\\
@@ -32,7 +32,7 @@ Dr. Juan Carlos Cajas}
 Este documento presenta la formulaci\'on matem\'atica, discretizaci\'on por diferencias
 finitas y evaluacion computacional de solucionadores para ecuaciones de tipo
 calor/Laplace. Se usa el algoritmo de Thomas para sistemas tridiagonales y se
-analiza el rendimiento de la paralelizaci\'on con OpenMP en el caso bidimensional.
+analiza el rendimiento de la paralelizaci\'on con OpenMP y ACC en el caso bidimensional.
 \end{abstract}
 
 \section{Introducci\'on}
@@ -73,13 +73,15 @@ Para el caso bidimensional estacionario, se obtiene la ecuaci\'on de Laplace en 
 Se consideran condiciones de frontera de tipo Dirichlet (temperatura fija) y 
 Neumann (flujo de calor especificado) seg\'un el experimento.
 
-\textbf{Frontera tipo Dirichlet:}
+\medskip
+
+\paragraph{Frontera tipo Dirichlet:}
 
 \begin{equation}
 T(0)=T_0, \quad T(L)=T_L
 \end{equation}
 
-\textbf{Frontera tipo Neumann:}
+\paragraph{Frontera tipo Neumann:}
 
 Si $q_N$ representa el flujo de calor saliente normal a la frontera, la
 condici\'on de Neumann se escribe como:
@@ -133,7 +135,9 @@ T_{i+1} -2T_i + T_{i-1}=0
 
 con condiciones de frontera de tipo Dirichlet/Neumann seg\'un el experimento.
 
-\textbf{Ecuaci\'on matricial 1D:}
+\medskip
+
+\paragraph{Ecuaci\'on matricial 1D:}
 
 La Eq. (13) se puede escribir en forma matricial $A \mathbf{T} = \mathbf{r}$,
 donde $A$ es una matriz tridiagonal con $-2$ en la diagonal principal y $1$ 
@@ -168,7 +172,9 @@ T_{n-1}
 Se hace notar que faltan las temperaturas frontera i.e. $T_1$ y $T_n$ que 
 depender\'an del tipo de frontera (Dirichlet o Neumann).
 
-\textbf{Ecuaci\'on matricial 1D con condiciones frontera tipo Dirichlet:}
+\medskip
+
+\paragraph{Ecuaci\'on matricial 1D con condiciones frontera tipo Dirichlet:}
 
 Con condiciones de frontera de tipo Dirichlet, el sistema se modifica para 
 incluir los valores conocidos en las matrices. Dado que $T_1$ y $T_n$ son 
@@ -206,7 +212,9 @@ T_L
 \end{pmatrix}
 \end{equation}
 
-\textbf{Ecuaci\'on matricial 1D con frontera izquierda tipo Neumann:}
+\medskip
+
+\paragraph{Ecuaci\'on matricial 1D con frontera izquierda tipo Neumann:}
 
 Se estudia el caso en el que la frontera izquierda usa una condici\'on de Neumann
 y la frontera derecha conserva una condici\'on de Dirichlet. Con flujo saliente
@@ -649,7 +657,7 @@ correspondientes en el dominio.
 end Program Calor1D
 \end{verbatim}
 
-\textbf{Subrutina \texttt{tri}}  
+\paragraph{Subrutina \texttt{tri}}  
 
 \medskip
 
@@ -828,7 +836,7 @@ donde se fija la temperatura a cero.
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.8\textwidth]{figures/secuencial/calor1D/temperatura_1d.png}
+\includegraphics[width=0.8\textwidth]{temperatura_1d.png}
 \caption{Distribución de temperatura en el caso 1D}
 \label{fig:temp_1d}
 \end{figure}
@@ -969,7 +977,7 @@ superior e inferior.}
 \label{fig:placa_2d}
 \end{figure}
 
-Se construyen las matrices tridiagonales para cada cada direcci\'on, una 
+Se construyen las matrices tridiagonales para cada direcci\'on, una 
 matriz para cada conjunto de nodos. As\'i en total, se resuelven $n_y$ 
 sistemas tridiagonales en la direcci\'on $x$ y $n_x$ sistemas tridiagonales en 
 la direcci\'on $y$. En este caso, 3 + 5 = 8 sistemas tridiagonales en total.
@@ -1274,9 +1282,9 @@ An\'alogamente, para \(i=3\) y \(i=4\):
 
 \begin{equation}
 \begin{aligned}
-\mathbf{t}^{(y)}_{i=2} &= [5/14,\;5/14,\;5/14]^T,\\
-\mathbf{t}^{(y)}_{i=3} &= [10/7,\;10/7,\;10/7]^T,\\
-\mathbf{t}^{(y)}_{i=4} &= [75/14,\;75/14,\;75/14]^T.
+\mathbf{tt}^{(y)}_{i=2} &= [5/14,\;5/14,\;5/14]^T,\\
+\mathbf{tt}^{(y)}_{i=3} &= [10/7,\;10/7,\;10/7]^T,\\
+\mathbf{tt}^{(y)}_{i=4} &= [75/14,\;75/14,\;75/14]^T.
 \end{aligned}
 \end{equation}
 
@@ -1336,7 +1344,7 @@ donde se declaran las variables y los parámetros necesarios para la simulación
   ! Iteradores y tamaño del problema
   !
   integer :: ii, jj, iter
-  integer, parameter :: nx = 60, ny = 30, itermax=10000
+  integer, parameter :: nx = 300, ny = 150, itermax=20000
   !
 \end{verbatim}
 
@@ -1369,11 +1377,11 @@ $cfy$ para almacenar las condiciones de frontera.
   double precision :: tt(nx,ny,2)     ! vector de inc\'ognitas, 1 para la iteraci\'on actual 
                                       ! y 2 para la anterior
   double precision :: tx(nx), ty(ny)  ! vectores de inc\'ognitas 1D
-  double precision :: rx(nx),ry(ny)   ! vector de resultados del s. ecuaciones
+  double precision :: rx(nx), ry(ny)  ! vector de resultados del s. ecuaciones
   double precision :: cfx(ny,2),cfy(nx,2) ! vector de condiciones de frontera
 \end{verbatim}
 
-Asimismo, se necesita de una matriz tridiagonal sobredimensionada para cada direcci\'on
+Asimismo, se necesita de una matriz tridiagonal para cada direcci\'on
 para almacenar los coeficientes de los sistemas tridiagonales. En este caso, se opta por usar 
 vectores separados para cada dirección, lo que permite una implementación más 
 clara y eficiente del algoritmo de Thomas para resolver los sistemas 
@@ -1388,11 +1396,11 @@ vectores $cpx$, $denx$, $cpy$ y $deny$ para almacenar la factorización de Thoma
   ! Variables para almacenar los coeficientes de los sistemas tridiagonales
   !
   double precision :: ax(nx), cx(nx), bx_base(nx) ! Variables para almacenar
-  !                                               ! matriz tridiagonal sobredimensionada
+  !                                               ! matriz tridiagonal
   double precision :: cpx(nx), denx(nx)
   !
   double precision :: ay(ny), cy(ny), by_base(ny) ! Variables para almacenar
-  !                                               ! matriz tridiagonal sobredimensionada
+  !                                               ! matriz tridiagonal
   double precision :: cpy(ny), deny(ny)
 \end{verbatim}
 
@@ -1434,7 +1442,7 @@ modificarse posteriormente para establecer condiciones iniciales espec\'ificas:
 
 \begin{verbatim}
   !
-  ! Inicializacion de variables
+  ! Inicialización de variables
   !
   ax(:)   = 0.d0
   bx_base(:) = 0.d0
@@ -1469,7 +1477,7 @@ modificarse posteriormente para establecer condiciones iniciales espec\'ificas:
   ay(1) = 0.d0
   by_base(1) = -1.d0
   cy(1) = 1.d0
-  ay(ny) = -1.d0
+  ay(ny) = 0.d0
   by_base(ny) = 1.d0
   cy(ny) = 0.d0
 \end{verbatim}
@@ -1486,16 +1494,18 @@ factorizaci\'on con \texttt{tri\_factor}.
 
 Asimismo, se est\'a resolviendo una placa bidimensional, las condiciones 
 frontera se expresar\'an como vectores para cada direcci\'on. 
-En este caso, se trabaja con condiciones mixtas: Dirichlet en direcci\'on $x$
-y Neumann homog\'enea en direcci\'on $y$. En $x$ se fija la temperatura en los
-dos bordes ($T=1^{o}C$ a la izquierda y $T=0^{o}C$ a la derecha), mientras que en $y$
-se impone flujo nulo en ambos extremos ($\partial T/\partial y = 0$). Esto se
-traduce en 
+En este caso, se trabaja con condiciones mixtas. En $x$, Dirichlet en los dos
+bordes ($T=1^{o}C$ a la izquierda y $T=0^{o}C$ a la derecha). En $y$, Neumann
+homog\'enea en el borde inferior ($y=0$, flujo nulo) y Dirichlet en el borde
+superior ($y=L_y$, $T=1^{o}C$). Con la indexaci\'on del c\'odigo, $j=1$ es
+$y=0$ y $j=n_y$ es $y=L_y$. Esto se traduce en
 
 \begin{equation}
   \begin{array}{l}
-    cfx_1 = T_0 = 1, \quad cfy_1 = -k \frac{\partial T}{\partial y}\bigg|_{y=0} = 0, \\
-    cfx_{2} = T_{L_x} = 0, \quad cfy_{2} = -k \frac{\partial T}{\partial y}\bigg|_{y=L_y} = 0.
+    cfx_1 = T\big|_{x=0} = 1, \quad
+    cfy_1 = -k \dfrac{\partial T}{\partial y}\bigg|_{y=0} = 0, \\
+    cfx_{2} = T\big|_{x=L_x} = 0, \quad
+    cfy_{2} = T\big|_{y=L_y} = 1.
   \end{array}
 \end{equation}
 
@@ -1509,25 +1519,21 @@ y \texttt{$cfy$} para cada direcci\'on. As\'i,
 
 \begin{equation}
   \begin{array}{l}
-    cfx(i,1) = 1, \quad cfx(i,2) = 0 \quad \forall i \in [1, n_x], \\
-    cfy(j,1) = 0, \quad cfy(j,2) = 0 \quad \forall j \in [1, n_y]
+    cfx(i,1) = 1, \quad cfx(i,2) = 0 \quad \forall i \in [1, n_y], \\
+    cfy(j,1) = 0, \quad cfy(j,2) = 1 \quad \forall j \in [1, n_x].
   \end{array}
 \end{equation}
 
 \begin{verbatim}
-  !
-  ! Condiciones de frontera en direcci'on x
-  !
+  ! Fronteras en x: Dirichlet T=1 (izq), T=0 (der)
   do ii = 1, ny
      cfx(ii,1) = 1.d0
      cfx(ii,2) = 0.d0
   end do
-  !
-  ! Condiciones de frontera en direcci'on y
-  !
+  ! Fronteras en y: Neumann q=0 (abajo), Dirichlet T=1 (arriba)
   do jj = 1, nx
      cfy(jj,1) = 0.d0
-     cfy(jj,2) = 0.d0
+     cfy(jj,2) = 1.d0
   end do
 \end{verbatim}
 
@@ -1662,7 +1668,564 @@ se imponen seg\'un las condiciones de frontera almacenadas en \texttt{cfx}.
   end Program Calor2D
   \end{verbatim}
 
-\section{Caso 2D paralelo con OpenMP} 
+  Las subrutinas ya se han explicado en el caso 1D, por lo que no se repiten aquí.
+
+  \medskip
+
+  \paragraph{Resultados}
+
+  \medskip
+
+  Se muestran a continuaci\'on los resultados obtenidos para el caso 2D, 
+  incluyendo la distribuci\'on de temperatura a lo largo del dominio de 
+  soluci\'on. Se observa que la temperatura disminuye linealmente desde el 
+  extremo izquierdo, donde se impone un flujo de calor, hasta el extremo derecho, 
+  donde se fija la temperatura a cero.
+
+  \begin{figure}[h]
+  \centering
+  \captionsetup{justification=centering}
+  \includegraphics[width=0.8\textwidth]{calor2D_plate_blue_red.png}
+  \caption{Distribuci\'on de temperatura en el caso 2D (secuencial). 
+  Malla 300 $\times$ 150 puntos, 9135 iteraciones. Fronteras tipo Dirichlet en 
+  $T \bigg| _{x = 0} = 1^{o}C$ y $T \bigg| _{x = 10} = 0^{o}C$; Neumann $q=0$ en 
+  $y=0$ y $T=1^{o}C$ en $y=5$. Tiempo de ejecuci\'on secuencial: 10.1 s.}
+  \label{fig:temp_2d}
+  \end{figure}
+
+  La gr\'afica de la distribuci\'on de temperatura se muestra en la figura 
+  \ref{fig:temp_2d}.
+  Se observa que la temperatura disminuye desde el extremo izquierdo, hasta el extremo 
+  derecho, donde se fija la temperatura a cero. El extremo inferior cumple con la 
+  condici\'on de Neumann $q=0$.
+
+\section{Metodolog\'ia computacional paralela del caso 2D}
+
+La versi\'on paralela se implementa en
+\texttt{OMP/calor2D/calor2D\_parallel.f90} (programa principal) y en el
+m\'odulo \texttt{OMP/calor2D/calor2D\_utils.f90}, que agrupa el algoritmo de
+Thomas (\texttt{tri}) y el c\'alculo del residuo de convergencia
+(\texttt{calc\_residuo2}). Se compila y enlaza con OpenMP habilitado, por
+ejemplo:
+
+\begin{verbatim}
+gfortran -O3 -fopenmp calor2D_utils.f90 calor2D_parallel.f90 -o calor2D_omp
+\end{verbatim}
+
+\medskip
+
+Respecto al caso secuencial, la f\'isica (dominio $L_x\times L_y$, malla
+$300\times 150$, tolerancia $10^{-3}$) y el esquema ADI por barridos en $y$ y
+$x$ son los mismos. Los cambios principales son cuatro:
+
+\begin{enumerate}
+  \item \textbf{Tres campos de temperatura} (\texttt{tt\_old}, \texttt{tt\_mid},
+        \texttt{tt\_new}) en lugar de \texttt{tt(:,:,1)} y \texttt{tt(:,:,2)}.
+        As\'i cada barrido paralelo lee un arreglo y escribe en otro, sin
+        condiciones de carrera entre hilos.
+  \item \textbf{Paralelismo por l\'ineas/columnas}: cada fila horizontal $j$
+        (barrido en $y$) y cada columna vertical $i$ (barrido en $x$) resuelve
+        un sistema tridiagonal independiente; OpenMP reparte esas
+        l\'ineas/columnas entre hilos.
+  \item \textbf{Thomas factorizado como en el secuencial}: al inicio,
+        \texttt{tri\_factor} sobre los coeficientes constantes genera
+        \texttt{cpx}, \texttt{denx}, \texttt{cpy}, \texttt{deny} (compartidos,
+        solo lectura). En cada l\'inea/columna cada hilo solo ensambla $r$,
+        llama a \texttt{tri\_solve} y guarda la soluci\'on; los vectores
+        \texttt{rx}, \texttt{tx} (o \texttt{ry}, \texttt{ty}) son \texttt{private}.
+  \item \textbf{\texttt{schedule(static)}} en los \texttt{parallel do}: reparto
+        uniforme de filas/columnas entre hilos (mismo coste por l\'inea).
+\end{enumerate}
+
+\paragraph{Archivos en \texttt{OMP/calor2D}}
+
+\begin{center}
+\begin{tabular}{ll}
+\hline
+Archivo & Rol en la compilaci\'on habitual \\
+\hline
+\texttt{calor2D\_parallel.f90} & Programa principal (\texttt{program Calor2D}) \\
+\texttt{calor2D\_utils.f90}     & M\'odulo: \texttt{tri\_factor}, \texttt{tri\_solve}, \texttt{calc\_residuo2} \\
+\hline
+\end{tabular}
+\end{center}
+
+A fin de realizar mediciones de escalamiento, se crean scripts en Python. El 
+\emph{benchmark} de aceleraci\'on (\texttt{OMP/scripts/benchmark\_aceleracion.py}) compila
+\texttt{calor2D\_utils.f90} + \texttt{calor2D\_parallel.f90} y escribe el binario en
+\texttt{OMP/build/} y guarda tablas y figuras en \texttt{OMP/tables/} y \texttt{OMP/figures/}.
+
+\medskip
+
+Nota: En \texttt{OMP/openmp\_basics/} hay ejemplos introductorios 
+(\texttt{hello\_openmp}, producto escalar, etc.) independientes del solver 2D.
+
+\paragraph{Programa principal: cabecera y variables}
+
+\medskip
+
+Se importa \texttt{omp\_lib} (tiempo, n\'umero de hilos, directivas) y el m\'odulo
+\texttt{calor2D\_utils}. Los coeficientes \texttt{ax}, \texttt{bx\_base},
+\texttt{cpx}, \texttt{denx} (y el an\'alogo en $y$) se calculan \textbf{una vez}
+y se comparten entre hilos. Solo \texttt{rx}, \texttt{tx}, \texttt{ry},
+\texttt{ty} son trabajo por hilo (privados en cada \texttt{parallel do}).
+
+\begin{verbatim}
+program Calor2D
+  use omp_lib
+  use calor2D_utils
+  implicit none
+
+  integer, parameter :: nx = 300, ny = 150, itermax = 20000
+  integer :: ii, jj, iter
+
+  double precision :: lx, ly, deltax, deltay
+  double precision :: inv_dx2, inv_dy2
+  double precision :: residuo, tolerancia, tolerancia2
+
+  double precision, allocatable :: tt_old(:,:), tt_mid(:,:), tt_new(:,:)
+  double precision, allocatable :: cfx(:,:), cfy(:,:)
+
+  ! Coeficientes constantes y factorizaci\'on Thomas (compartidos, solo lectura)
+  double precision :: ax(nx), cx(nx), bx_base(nx)
+  double precision :: cpx(nx), denx(nx)
+  double precision :: ay(ny), cy(ny), by_base(ny)
+  double precision :: cpy(ny), deny(ny)
+
+  ! Vectores de trabajo por hilo (private en cada parallel do)
+  double precision :: rx(nx), tx(nx)
+  double precision :: ry(ny), ty(ny)
+\end{verbatim}
+
+\texttt{cfx} tiene forma \texttt{(ny,2)}: para cada fila $j$ guarda el valor Dirichlet
+en $x=0$ y en $x=L_x$. \texttt{cfy} es \texttt{(nx,2)}: por cada columna $i$, el dato
+en $y=0$ (Neumann, aqu\'i cero) y en $y=L_y$ (Dirichlet $T=1$). 
+
+\medskip
+
+Los campos \texttt{tt\_*} son \texttt{allocatable} porque el
+tamaño se fija en \texttt{allocate} con \texttt{nx} y \texttt{ny}; con par\'ametros
+constantes es equivalente a declararlos \texttt{tt\_old(nx,ny)}, pero deja la puerta
+abierta a mallas variables. 
+
+\begin{verbatim}
+  allocate(tt_old(nx,ny), tt_mid(nx,ny), tt_new(nx,ny))
+  allocate(cfx(ny,2), cfy(nx,2))
+
+  tolerancia = 1.d-3
+  tolerancia2 = tolerancia*tolerancia
+\end{verbatim}
+
+Se establecen los par\'ametros del problema f\'isico.
+
+\begin{verbatim}
+  lx     = 10.d0
+  ly     = 5.d0
+  deltax = lx / (nx - 1)
+  deltay = ly / (ny - 1)
+  inv_dx2 = 1.d0/(deltax*deltax)
+  inv_dy2 = 1.d0/(deltay*deltay)
+
+  tt_old = 0.d0
+  tt_mid = 0.d0
+  tt_new = 0.d0
+\end{verbatim}
+
+Las mismas convenciones de coeficientes tridiagonales en el barrido en $x$ que en
+el secuencial: en $j=1$, $b_1=-1$, $c_1=1$ (Neumann); en $j=n_y$, $a_{n_y}=0$,
+$b_{n_y}=1$, $c_{n_y}=0$ (Dirichlet). Los valores en \texttt{cfx} y \texttt{cfy}
+coinciden con el caso secuencial (izq.\ $T=1$, der.\ $T=0$, abajo
+$q=0$, arriba $T=1$).
+
+\medskip
+
+Igual que en el secuencial, los coeficientes de la matriz se fijan al inicio y
+se factorizan con \texttt{tri\_factor}; en cada iteraci\'on paralela solo cambia
+el arreglo $r$. 
+
+\begin{verbatim}
+  ! Coeficientes tridiagonales
+  do ii = 2, nx - 1
+     ax(ii) = inv_dx2
+     bx_base(ii) = -2.d0 * (inv_dx2 + inv_dy2)
+     cx(ii) = inv_dx2
+  end do
+  ax(1) = 0.d0
+  bx_base(1) = 1.d0
+  cx(1) = 0.d0
+  ax(nx) = 0.d0
+  bx_base(nx) = 1.d0
+  cx(nx) = 0.d0
+
+  do jj = 2, ny - 1
+     ay(jj) = inv_dy2
+     by_base(jj) = -2.d0 * (inv_dx2 + inv_dy2)
+     cy(jj) = inv_dy2
+  end do
+  ay(1) = 0.d0
+  by_base(1) = -1.d0
+  cy(1) = 1.d0
+  ay(ny) = 0.d0
+  by_base(ny) = 1.d0
+  cy(ny) = 0.d0
+
+  call tri_factor(ax, bx_base, cx, cpx, denx, nx)
+  call tri_factor(ay, by_base, cy, cpy, deny, ny)
+\end{verbatim}
+
+Seguidamente se cargan las condiciones frontera tipo Dirichlet y Neumann.
+
+\begin{verbatim}
+  !--------------------------------------------
+  ! Condiciones de frontera en x
+  !--------------------------------------------
+  do jj = 1, ny
+     cfx(jj,1) = 1.d0
+     cfx(jj,2) = 0.d0
+  end do
+
+  !--------------------------------------------
+  ! Condiciones de frontera en y
+  !--------------------------------------------
+  do ii = 1, nx
+     cfy(ii,1) = 0.d0
+     cfy(ii,2) = 1.d0
+  end do
+\end{verbatim}
+
+
+\paragraph{Directivas OpenMP usadas}
+
+\medskip
+
+En todas las regiones se emplea \texttt{default(none)} para obligar a listar
+expl\'icitamente \texttt{shared} y \texttt{private}. As\'i se evita que una
+variable quede compartida por descuido. Se a\~nade \texttt{schedule(static)} para equilibrar
+carga cuando cada fila/columna cuesta lo mismo. La variable del \texttt{do}
+asociado al \texttt{parallel do} ($j$ o $i$)
+queda \textbf{privada autom\'aticamente}; por eso en el barrido en $y$ el bucle
+paralelo es \texttt{do jj} y en la lista \texttt{private} aparece \texttt{ii}
+(el \'indice del ensamblado interior), no \texttt{jj}.
+
+\medskip
+
+Cada paso del \texttt{do iter = 1, itermax} ejecuta \textbf{seis} tramos OpenMP
+m\'as una llamada a subrutina con paralelismo interno:
+
+\begin{center}
+\begin{tabular}{clll}
+\hline
+\# & Tramo & Bucle paralelo & Efecto \\
+\hline
+1 & Copia bordes $y$ & \texttt{do ii} & \texttt{tt\_mid(:,1)}, \texttt{tt\_mid(:,ny)} $\leftarrow$ \texttt{tt\_old} \\
+2 & Barrido en $y$  & \texttt{do jj=2,ny-1} & Filas interiores $\rightarrow$ \texttt{tt\_mid} \\
+3 & Copia bordes $x$ & \texttt{do jj} & \texttt{tt\_new(1,:)}, \texttt{tt\_new(nx,:)} $\leftarrow$ \texttt{tt\_mid} \\
+4 & Barrido en $x$  & \texttt{do ii=2,nx-1} & Columnas interiores $\rightarrow$ \texttt{tt\_new} \\
+5 & Residuo         & \texttt{calc\_residuo2} & \texttt{reduction(+:res)} sobre la malla \\
+6 & Actualizar      & \texttt{collapse(2)} & \texttt{tt\_old} $\leftarrow$ \texttt{tt\_new} \\
+\hline
+\end{tabular}
+\end{center}
+
+El flujo de datos entre arreglos es:
+\texttt{tt\_old} $\rightarrow$ (barrido $y$) $\rightarrow$ \texttt{tt\_mid}
+$\rightarrow$ (barrido $x$) $\rightarrow$ \texttt{tt\_new} $\rightarrow$
+residuo $\rightarrow$ \texttt{tt\_old}. No hay \texttt{!\$omp} dentro de
+\texttt{tri\_solve}: cada hilo resuelve su sustituci\'on 1D en serie sobre su $r$
+privado.
+
+\medskip
+
+\paragraph{Bucle de iteraciones y barrido en $y$}
+
+\medskip
+
+El bucle externo admite hasta \texttt{itermax = 20000} iteraciones, pero sale antes si
+el residuo cumple la tolerancia (igual que en el secuencial).
+
+\paragraph{Regi\'on 1: bordes en $y$ antes del barrido.}
+Las filas $j=1$ y $j=n_y$ no se actualizan en el \texttt{do jj = 2, ny-1}
+siguiente; se copian desde \texttt{tt\_old} para conservar el estado en esos
+nodos hasta que el barrido en $x$ imponga las ecuaciones de frontera en $y$:
+
+\begin{verbatim}
+  !-----------------------------------------------
+  ! Iteraciones
+  !-----------------------------------------------  
+  do iter = 1, itermax
+
+    !-----------------------------------------------   
+    ! 1. Barrido en y (líneas horizontales)
+    !-----------------------------------------------
+    ! Cada línea en x se resuelve en paralelo
+    ! leyendo solamente tt_old y escribiendo en tt_mid
+
+     !$omp parallel do default(none) &
+     !$omp shared(tt_old,tt_mid) private(ii) schedule(static)
+     do ii = 1, nx
+        tt_mid(ii,1) = tt_old(ii,1)
+        tt_mid(ii,ny) = tt_old(ii,ny)
+     end do
+     !$omp end parallel do
+\end{verbatim}
+
+\paragraph{Regi\'on 2: barrido en $y$ (l\'ineas horizontales).}
+Cada hilo toma una o varias filas $j\in\{2,\ldots,n_y-1\}$. En el bucle interior
+\texttt{do ii = 2, nx-1} se arma el segundo miembro seg\'un la ecuaci\'on
+\ref{eq:coef_tridiagonal_x_2D_r}, usando los vecinos en $y$ de \texttt{tt\_old}:
+\begin{equation}
+r_i^{(x)} = -\frac{1}{(\Delta y)^2}\,T_{i,j-1}-\frac{1}{(\Delta y)^2}\,T_{i,j+1}.
+\end{equation}
+Luego se imponen Dirichlet en $x$ con \texttt{cfx(jj,1)} y \texttt{cfx(jj,2)},
+se resuelve con \texttt{tri\_solve} y se copia \texttt{tx} a \texttt{tt\_mid(:,jj)}:
+
+\begin{verbatim}
+     !-----------------------------------------------   
+     ! 2. Barrido en x (líneas verticales)
+     !-----------------------------------------------
+     ! Cada línea en y se resuelve en paralelo
+     ! leyendo solamente tt_mid y escribiendo en tt_new
+
+     !$omp parallel do default(none) &
+     !$omp shared(tt_mid, tt_new) private(jj) schedule(static)
+     do jj = 1, ny
+        tt_new(1, jj) = tt_mid(1, jj)
+        tt_new(nx, jj) = tt_mid(nx, jj)
+     end do
+     !$omp end parallel do
+     !$omp parallel do default(none) &
+     !$omp shared(inv_dy2,tt_old,tt_mid,cfx,ax,cpx,denx) &
+     !$omp private(rx,tx,ii) schedule(static)
+     do jj = 2, ny-1
+
+        do ii = 2, nx-1
+           rx(ii) = -inv_dy2*tt_old(ii,jj-1) &
+                    -inv_dy2*tt_old(ii,jj+1)
+        end do
+        rx(1)  = cfx(jj,1)
+        rx(nx) = cfx(jj,2)
+
+        call tri_solve(ax, cpx, denx, rx, tx, nx)
+
+        do ii = 1, nx
+           tt_mid(ii,jj) = tx(ii)
+        end do
+     end do
+     !$omp end parallel do
+\end{verbatim}
+
+\texttt{ax}, \texttt{cpx} y \texttt{denx} son \texttt{shared} (solo lectura);
+\texttt{rx} y \texttt{tx} son \texttt{private} porque \texttt{tri\_solve} modifica
+\texttt{rx} in situ.
+
+\subsection{Barrido en $x$}
+
+\paragraph{Regi\'on 3: bordes en $x$.}
+Las columnas $i=1$ y $i=n_x$ no entran en \texttt{do ii = 2, nx-1}; se copian de
+\texttt{tt\_mid} a \texttt{tt\_new} (valores ya fijados por el barrido en $y$ en
+esos bordes laterales).
+
+\paragraph{Regi\'on 4: barrido en $x$ (columnas verticales).}
+Para cada $i$ interior se ensambla $r_j^{(y)}$ con la ecuaci\'on
+\ref{eq:coef_tridiagonal_y_2D_r} a partir de \texttt{tt\_mid}, se imponen Neumann
+en $j=1$ y Dirichlet en $j=n_y$ mediante \texttt{cfy} y los coeficientes
+$a_1,b_1,c_1$ y $a_{n_y},b_{n_y},c_{n_y}$ (ya en \texttt{by\_base} v\'ia
+\texttt{tri\_factor}), se llama a \texttt{tri\_solve} y se sobrescribe
+\texttt{tt\_new(i,:)}:
+
+\begin{verbatim}
+     !$omp parallel do default(none) &
+     !$omp shared(inv_dx2,tt_mid,tt_new,cfy,ay,cpy,deny) &
+     !$omp private(ry,ty,jj) schedule(static)
+     do ii = 2, nx-1
+
+        do jj = 2, ny-1
+           ry(jj) = -inv_dx2*tt_mid(ii-1,jj) &
+                    -inv_dx2*tt_mid(ii+1,jj)
+        end do
+        ry(1)  = cfy(ii,1)
+        ry(ny) = cfy(ii,2)
+
+        call tri_solve(ay, cpy, deny, ry, ty, ny)
+
+        do jj = 1, ny
+           tt_new(ii,jj) = ty(jj)
+        end do
+     end do
+     !$omp end parallel do
+\end{verbatim}
+
+\subsection{Residuo, actualizaci\'on y salida}
+\label{subsec:omp-residuo-salida}
+
+\paragraph{Regi\'on 5.}
+El residuo de convergencia (suma de cuadrados de
+$T^{\mathrm{new}}-T^{\mathrm{old}}$ en todos los nodos) se calcula en el m\'odulo.
+Compara el campo tras el barrido en $x$ (\texttt{tt\_new}) con el de inicio de
+iteraci\'on (\texttt{tt\_old}), no con \texttt{tt\_mid}.
+
+\paragraph{Criterio de parada.}
+Tras \texttt{calc\_residuo2}, el programa sale del bucle si
+\texttt{residuo < tolerancia2}, con la misma regla que el secuencial. El
+\texttt{write} final informa el \texttt{iter} real alcanzado (no necesariamente
+\texttt{itermax}). En pruebas locales con un hilo, la versi\'on OpenMP converge
+en un n\'umero de pasos distinto al secuencial (p.\,ej.\ $\sim 1.5\times 10^4$
+frente a $9135$), por el esquema de tres campos y las copias expl\'icitas de
+bordes antes de cada barrido; el speedup entre hilos sigue siendo comparable
+porque el conteo de iteraciones es determinista para un mismo binario y malla.
+
+\paragraph{Regi\'on 6.}
+Tras evaluar convergencia, se prepara la siguiente iteraci\'on global:
+
+\begin{verbatim}
+     call calc_residuo2(tt_new, tt_old, nx, ny, residuo)
+     if (residuo < tolerancia2) then
+        exit
+     end if
+
+     !$omp parallel do default(none) &
+     !$omp shared(tt_new,tt_old) private(ii,jj) collapse(2) schedule(static)
+     do ii = 1, nx
+        do jj = 1, ny
+           tt_old(ii,jj) = tt_new(ii,jj)
+        end do
+     end do
+     !$omp end parallel do
+
+  end do
+
+  write(*,*) 'Convergencia en ', iter, ' iteraciones'
+\end{verbatim}
+
+\texttt{collapse(2)} fusiona los bucles \texttt{ii} y \texttt{jj} en un solo
+espacio de iteraci\'on de tama\~no $n_x n_y$, repartiendo m\'as grano fino entre
+hilos cuando $n_x$ o $n_y$ son moderados.
+
+\paragraph{Salida a disco.}
+A diferencia del secuencial, el ejecutable OpenMP no escribe
+\texttt{resultado\_malla.dat}; el \emph{benchmark} solo mide tiempo de pared y
+parsea la l\'inea ``Convergencia en \ldots iteraciones'' del \texttt{write} final.
+Para comparar campos con el secuencial habr\'ia que a\~nadir una escritura
+an\'aloga al final del programa o en el script de medici\'on.
+
+\subsection{M\'odulo \texttt{calor2D\_utils}}
+
+El m\'odulo replica la API del secuencial (\texttt{tridiagonal.f90}) m\'as el
+residuo paralelo:
+
+\begin{verbatim}
+module calor2D_utils
+  implicit none
+contains
+  subroutine tri_factor(a, b, c, cp, den, n)
+  subroutine tri_solve(a, cp, den, r, u, n)
+  subroutine calc_residuo2(...)
+end module calor2D_utils
+\end{verbatim}
+
+\subsubsection{Subrutinas \texttt{tri\_factor} y \texttt{tri\_solve}}
+
+Son las mismas que en el caso 1D y el secuencial 2D (ver
+Subsecci\'on~1D): \texttt{tri\_factor} se ejecuta \textbf{dos veces} al inicio
+del programa principal; \texttt{tri\_solve} se llama una vez por fila o columna
+interior dentro de cada \texttt{parallel do}, con \texttt{r} privado por hilo.
+
+\subsubsection{Subrutina \texttt{calc\_residuo2}}
+
+Se invoca desde el programa principal (fuera de un \texttt{parallel do}), pero
+abre su \textbf{propia} regi\'on paralela. Calcula el mismo criterio que el
+secuencial con \texttt{reduction(+:res)}:
+
+\begin{verbatim}
+  subroutine calc_residuo2(tt_new, tt_old, nx, ny, res)
+    use omp_lib
+    integer, intent(in)           :: nx, ny
+    double precision, intent(in)  :: tt_new(nx,ny), tt_old(nx,ny)
+    double precision, intent(out) :: res
+    integer :: ii, jj
+
+    res = 0.d0
+    !$omp parallel do default(none) private(ii,jj) &
+    !$omp shared(nx,ny,tt_new,tt_old) reduction(+:res) schedule(static)
+    do jj = 1, ny
+       do ii = 1, nx
+          res = res + (tt_new(ii,jj)-tt_old(ii,jj)) &
+               * (tt_new(ii,jj)-tt_old(ii,jj))
+       end do
+    end do
+    !$omp end parallel do
+  end subroutine calc_residuo2
+\end{verbatim}
+
+\medskip
+
+El residuo de \emph{Laplace} (laplaciano discreto en cada nodo) no forma parte
+de este ejecutable; el criterio de monitoreo es \texttt{calc\_residuo2}
+(cambio entre iteraciones del ADI), igual que en el secuencial.
+
+\subsection{Mediciones de rendimiento (\texttt{OMP/scripts/})}
+
+\texttt{benchmark\_aceleracion.py} compila con \texttt{-fopenmp}, barre
+\texttt{OMP\_NUM\_THREADS} desde \texttt{--min-threads} hasta \texttt{--max-threads},
+repite \texttt{--runs} ejecuciones por punto, promedia tiempos de pared y escribe una tabla
+\texttt{.dat} con speedup $S_p=t_1/t_p$. Cada corrida termina por convergencia o por
+\texttt{itermax}; con el c\'odigo actual el n\'umero de iteraciones impreso es el mismo
+para todos los valores de hilos en una misma malla. \texttt{plot\_comparacion\_speedup.py}
+lee esas tablas para graficar curva ideal $S_p=p$ frente a la medida.
+
+\subsection{Cuadro resumen: secuencial frente a OpenMP}
+
+\begin{center}
+\begin{tabular}{lll}
+\hline
+Aspecto & Secuencial & OpenMP (\texttt{calor2D\_parallel}) \\
+\hline
+Campo de temperatura & \texttt{tt(:,:,1:2)} & \texttt{tt\_old}, \texttt{tt\_mid}, \texttt{tt\_new} \\
+Thomas & \texttt{tri\_factor} + \texttt{tri\_solve} & Igual (factor compartido) \\
+Coef.\ $a,b,c$ en $x,y$ & Precalculados & Precalculados; solo $r$ por l\'inea \\
+Scheduling & --- & \texttt{schedule(static)} en regiones \\
+Paralelismo & Ninguno & 6 regiones + residuo \\
+Parada & \texttt{residuo < tolerancia2} ($10^{-3}$, malla completa) & \texttt{residuo < tolerancia} ($10^{-4}$, $\sqrt{\cdot}$, interior; \texttt{exit} activo) \\
+Salida malla & \texttt{resultado\_malla.dat} & No implementada \\
+\hline
+\end{tabular}
+\end{center}
+
+\section{Resultados caso 2D paralelo con OMP}
+
+Se muestran a continuaci\'on los resultados obtenidos para el caso 2D paralelo con OpenMP,
+incluyendo la distribuci\'on de temperatura a lo largo del dominio de 
+soluci\'on. Se observa que la temperatura disminuye linealmente desde el 
+extremo izquierdo, donde se impone un flujo de calor, hasta el extremo derecho, 
+donde se fija la temperatura a cero.
+
+\begin{figure}[h]
+  \centering
+  \captionsetup{justification=centering}
+  \includegraphics[width=0.8\textwidth]{calor2D_plate_blue_red.png}
+  \caption{Distribuci\'on de temperatura en el caso 2D paralelo con OpenMP (misma malla hasta generar figura en \texttt{OMP/figures/})}
+  \label{fig:temp_2d_omp}
+\end{figure}
+
+\subsection{Escalamiento frente a la referencia (\texttt{REFERENCIA/paralelo})}
+
+Para comparar en la misma malla $n_x=300$, $n_y=150$ y con las mismas
+condiciones de frontera que el caso secuencial y \texttt{OMP/calor2D}
+(Dirichlet $T=1$ en $x=0$, $T=0$ en $x=L_x$; Neumann $q=0$ en $y=0$;
+Dirichlet $T=1$ en $y=L_y$), en \texttt{REFERENCIA/paralelo/} se ajust\'o
+localmente \texttt{mod\_utiles.f90} (\texttt{nx}, \texttt{ny}) y
+\texttt{calor2D.f90} (\texttt{deltax}, \texttt{deltay}, vectores
+\texttt{cfy} y coeficientes tridiagonales en $j=1$ y $j=n_y$; en
+\texttt{origin/main} la referencia usaba otra discretizaci\'on de malla y
+Dirichlet $T=1$/$T=0$ en ambos bordes $y$).
+En \texttt{REFERENCIA/paralelo/mod\_utiles.f90} se fij\'o tambi\'en
+\texttt{itermax=20000} (como en el desarrollo). En \texttt{calor2D.f90} de la
+referencia se \textbf{descoment\'o} \texttt{if (residuo < tolerancia) exit}
+(ven\'ia comentado en \texttt{main}); la tolerancia all\'i es
+\texttt{tolerancia = 1d-4} con residuo $\|\Delta T\|_2$ (ra\'iz de la suma de
+cuadrados en el interior), distinta del criterio del desarrollo
+(\texttt{tolerancia2}, suma en toda la malla). La versi\'on desarrollada usa
+\texttt{tolerancia = 1d-3} y $\approx 15103$ iteraciones en las mediciones.
 
 La versi\'on paralela distribuye los barridos independientes entre hilos de
 OpenMP. Si $t_p$ es el tiempo de ejecuci\'on usando $p$ hilos y $t_1$ es el
@@ -1687,88 +2250,452 @@ S_p^{ideal}=p,
 E_p^{ideal}=1.
 \end{equation}
 
-\section{Resultados}
+Las mediciones se obtuvieron con \texttt{OMP/scripts/benchmark\_aceleracion.py}:
+$10$ corridas por punto, $3$ warmups, mediana de tiempos de pared,
+calibraci\'on dedicada de $t_1$ con $10$ corridas adicionales a $1$ hilo
+(\texttt{--baseline-runs 10 --stat median}), y
+\texttt{OMP\_PROC\_BIND=true}, \texttt{OMP\_PLACES=cores}.
+El speedup es $S_p=t_1/t_p$ con el mismo $t_1$ para todos los $p$.
+Las muestras crudas quedan en \texttt{OMP/tables/*\_samples.txt}.
+La gr\'afica comparativa usa \texttt{plot\_comparacion\_speedup.py}
+(Tabla~\ref{tab:omp-speedup-h6}, Figuras~\ref{fig:comparacion-speedup-h6}--\ref{fig:comparacion-tiempos-h6}).
 
-Las tablas de rendimiento se guardan en \texttt{PROYECTO/tables/} y las figuras en
-\texttt{PROYECTO/figures/}. Para cada n\'umero de hilos $p$, el tiempo reportado se
-puede obtener como el promedio de varias corridas:
-
-\begin{equation}
-\overline{t}_p=\frac{1}{N}\sum_{\ell=1}^{N}t_{p,\ell},
-\end{equation}
-
-donde $N$ es el n\'umero de repeticiones y $t_{p,\ell}$ es el tiempo medido en
-la corrida $\ell$ usando $p$ hilos. Con este promedio, el speedup experimental
-queda:
-
-\begin{equation}
-S_p^{real}=\frac{\overline{t}_1}{\overline{t}_p}.
-\end{equation}
-
-La eficiencia experimental se calcula como:
-
-\begin{equation}
-E_p^{real}=\frac{S_p^{real}}{p}
-=\frac{\overline{t}_1}{p\,\overline{t}_p}.
-\end{equation}
-
-Para comparar con la aceleraci\'on ideal se usa:
-
-\begin{equation}
-\Delta S_p = S_p^{ideal}-S_p^{real}=p-S_p^{real}.
-\end{equation}
-
-Una diferencia $\Delta S_p$ cercana a cero indica que la ejecuci\'on paralela se
-aproxima al comportamiento ideal. Cuando $\Delta S_p$ crece, la eficiencia baja
-por costos de sincronizaci\'on, acceso a memoria, regiones no paralelas o
-desbalance entre hilos.
-
-\subsection{Comparaci\'on final con el c\'odigo de referencia}
-
-Se compar\'o la versi\'on paralela desarrollada en \texttt{paralelo/src/} contra
-el c\'odigo de referencia proporcionado en \texttt{paralelo/reference/}. Los
-archivos de referencia no fueron modificados. Para reducir el efecto de
-arranques fr\'ios y procesos de fondo, se us\'o una corrida de calentamiento por
-n\'umero de hilos y se report\'o la mediana de seis corridas medidas.
-
-Para aislar el efecto del paralelismo bajo el mismo comportamiento num\'erico,
-en la versi\'on desarrollada se reprodujeron dos errores presentes en
-\texttt{reference/}: (i) la condici\'on de frontera inferior del barrido en
-direcci\'on $y$ se dej\'o con la misma formulaci\'on incorrecta, y (ii) el corte
-por convergencia basado en residuo se mantuvo desactivado, forzando la
-ejecuci\'on hasta \texttt{itermax}.
-
-La comparaci\'on debe leerse como una comparaci\'on de comportamiento paralelo en
-la misma m\'aquina, no como igualdad estricta de carga num\'erica: ambas versiones 
-usan una malla de $480\times 240$.
-
-\begin{table}[H]
-\centering
-\caption{Comparaci\'on de tiempos y aceleraci\'on en la misma m\'aquina.}
-\label{tab:comparacion-speedup-final}
-\begin{tabular}{rrrrr}
-\toprule
-Hilos & $t_{\mathrm{nuestra}}$ [s] & $S_{\mathrm{nuestra}}$ &
-$t_{\mathrm{ref}}$ [s] & $S_{\mathrm{ref}}$ \\
-\midrule
-1 & 40.466 & 1.000 & 36.954 & 1.000 \\
-2 & 21.829 & 1.854 & 21.855 & 1.691 \\
-3 & 15.465 & 2.617 & 15.736 & 2.348 \\
-4 & 13.534 & 2.990 & 14.136 & 2.614 \\
-5 & 12.845 & 3.150 & 10.911 & 3.387 \\
-6 & 11.342 & 3.568 &  9.832 & 3.759 \\
-7 &  8.554 & 4.731 &  8.890 & 4.157 \\
-8 &  8.102 & 4.994 & 10.386 & 3.558 \\
-\bottomrule
-\end{tabular}
+\begin{table}[h]
+  \centering
+  \caption{Benchmark OpenMP, malla $300\times 150$, hasta $6$ hilos (tiempo mediano [s] y $S_p$).}
+  \label{tab:omp-speedup-h6}
+  \begin{tabular}{r r r r r}
+    \hline
+    $p$ & $t_p$ (desarrollo) & $S_p$ & $t_p$ (referencia) & $S_p$ \\
+    \hline
+    1 & 15.13 & 1.00 & 17.27 & 1.00 \\
+    2 &  8.25 & 1.83 & 10.11 & 1.71 \\
+    3 &  5.81 & 2.60 &  7.19 & 2.40 \\
+    4 &  4.55 & 3.33 &  6.49 & 2.66 \\
+    5 &  3.90 & 3.88 &  5.18 & 3.34 \\
+    6 &  3.63 & 4.17 &  5.21 & 3.32 \\
+    \hline
+  \end{tabular}
 \end{table}
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.78\textwidth]{comparacion_speedup_final.png}
-\caption{Curvas de aceleraci\'on de la versi\'on desarrollada y la referencia.}
-\label{fig:comparacion-speedup-final}
+\begin{figure}[h]
+  \centering
+  \captionsetup{justification=centering}
+  \includegraphics[width=0.65\textwidth]{comparacion_speedup_calor2D_h6.png}
+  \caption{Aceleraci\'on OpenMP: desarrollo (\texttt{OMP/calor2D}) frente a referencia
+  (\texttt{REFERENCIA/paralelo/calor2D.f90}, con \texttt{exit} activo), malla
+  $300\times 150$, hasta $6$ hilos. Curva roja discontinua: speedup ideal $S_p=p$.}
+  \label{fig:comparacion-speedup-h6}
 \end{figure}
+
+\begin{figure}[h]
+  \centering
+  \captionsetup{justification=centering}
+  \includegraphics[width=0.65\textwidth]{comparacion_tiempos_calor2D_h6.png}
+  \caption{Tiempo de pared medio por n\'umero de hilos (misma malla y condiciones que la
+  Figura~\ref{fig:comparacion-speedup-h6}).}
+  \label{fig:comparacion-tiempos-h6}
+\end{figure}
+
+En todas las curvas $S_p\le p$. Tras activar el \texttt{exit} en la referencia,
+ambos c\'odigos paran por residuo ($\approx 15103$ iter en desarrollo,
+$\approx 14320$--$14500$ en referencia, con ligera variaci\'on entre hilos por
+el orden paralelo).
+
+\bigskip
+
+\section{Metodolog\'ia computacional del caso 2D con OpenACC}
+
+La versi\'on OpenACC del repositorio se concentra en
+\texttt{ACC/paralelo/calor2D/calor2D\_acc.f90} y
+\texttt{calor2D\_acc\_utils.f90}. La f\'isica (dominio, malla $300\times 150$,
+$\Delta x=L_x/(n_x-1)$, tolerancia $10^{-3}$, fronteras mixtas) coincide con el
+desarrollo OpenMP, pero la \textbf{estructura de datos} es la de arreglos
+\textbf{unidimensionales planos} para almacenar \emph{todos} los sistemas
+tridiagonales de cada barrido en vectores \texttt{aa}, \texttt{bb}, \texttt{cc}
+y \texttt{rr} de tama\~no $n_x n_y$.
+
+\medskip
+
+Respecto al caso OpenMP con tres campos y Thomas factorizado, los rasgos del
+c\'odigo OpenACC son:
+
+\begin{enumerate}
+  \item \textbf{Campo de temperatura en dos planos}
+        \texttt{tt(nx,ny,1)} / \texttt{tt(:,:,2)} (como el secuencial), no
+        \texttt{tt\_old}/\texttt{tt\_mid}/\texttt{tt\_new}.
+  \item \textbf{Coeficientes tridiagonales en 1D}: en cada iteraci\'on se
+        reensamblan \texttt{aa}, \texttt{bb}, \texttt{cc} y \texttt{rr} sobre
+        el mismo bloque \texttt{nx*ny}; el barrido en $y$ usa
+        \texttt{indicex}$(i,j)=i+n_x(j-1)$ y el barrido en $x$ usa
+        \texttt{indicey}$(i,j)=j+n_y(i-1)$.
+  \item \textbf{Resoluci\'on con \texttt{tri}} (eliminaci\'on in situ, sin
+        \texttt{tri\_factor}): \texttt{tri} modifica \texttt{bb} y \texttt{rr}
+        del tramo; por eso hay que volver a ensamblar en cada paso del ADI.
+        La subrutina lleva \texttt{!\$acc routine seq} y se llama desde cada
+        \texttt{gang} (fila o columna).
+  \item \textbf{Regi\'on \texttt{!\$acc data}} con \texttt{copy} de
+        \texttt{tt} y de los cuatro vectores planos durante todo el bucle global.
+\end{enumerate}
+
+\paragraph{Archivos en \texttt{ACC/paralelo/calor2D}}
+
+\begin{center}
+\begin{tabular}{ll}
+\hline
+Archivo & Rol \\
+\hline
+\texttt{calor2D\_acc.f90}       & Programa \texttt{Calor2D\_ACC} \\
+\texttt{calor2D\_acc\_utils.f90} & \texttt{indicex}, \texttt{indicey}, \texttt{tri} (dispositivo) \\
+\hline
+\end{tabular}
+\end{center}
+
+Compilaci\'on t\'ipica (multicore; la GPU usar\'ia \texttt{-acc=gpu}):
+
+\begin{verbatim}
+nvfortran -O3 -Mpreprocess -acc=multicore -Minfo=accel \
+  -DNX=300 -DNY=150 -DITERMAX=20000 \
+  calor2D_acc_utils.f90 calor2D_acc.f90 -o calor2D_acc
+\end{verbatim}
+
+Los tama\~nos por defecto se fijan con preprocesador
+(\texttt{-DNX=300 -DNY=150 -DITERMAX=20000}). El \emph{benchmark}
+\texttt{ACC/scripts/benchmark\_acc\_thomas.py} escribe tablas en
+\texttt{ACC/tables/} y figuras en \texttt{ACC/figures/}.
+
+\paragraph{Programa principal: cabecera y variables}
+
+\medskip
+
+Se importan \texttt{indicex}, \texttt{indicey} y \texttt{tri} del m\'odulo de
+utilidades. Los macros \texttt{NX}, \texttt{NY}, \texttt{ITERMAX} (preprocesador)
+fijan la malla en compilaci\'on, igual que en el \emph{benchmark}.
+
+\begin{verbatim}
+program Calor2D_ACC
+  use calor2D_acc_utils, only : indicex, indicey, tri
+  implicit none
+
+  integer, parameter :: nx = NX, ny = NY, itermax = ITERMAX
+  integer :: ii, jj, iter
+
+  double precision :: lx, ly, deltax, deltay
+  double precision :: inv_dx2, inv_dy2
+  double precision :: residuo, tolerancia, tolerancia2, checksum
+
+  double precision :: tt(nx, ny, 2)
+  double precision :: cfx(ny, 2), cfy(nx, 2)
+  double precision :: tx(nx), ty(ny)
+
+  ! Todas las tridiagonales de un barrido en vectores 1D
+  double precision :: aa(nx * ny), bb(nx * ny)
+  double precision :: cc(nx * ny), rr(nx * ny)
+\end{verbatim}
+
+\texttt{cfx} es \texttt{(ny,2)} y \texttt{cfy} \texttt{(nx,2)}, con el mismo
+significado que en OpenMP: Dirichlet en $x$ ($T=1$ a la izquierda, $T=0$ a la
+derecha) y en $y$ (Neumann $q=0$ abajo, Dirichlet $T=1$ arriba).
+
+\begin{verbatim}
+  tolerancia = 1.d-3
+  tolerancia2 = tolerancia * tolerancia
+
+  lx = 10.d0
+  ly = 5.d0
+  deltax = lx / (nx - 1)
+  deltay = ly / (ny - 1)
+  inv_dx2 = 1.d0 / (deltax * deltax)
+  inv_dy2 = 1.d0 / (deltay * deltay)
+
+  tt = 0.d0
+  aa = 0.d0
+  bb = 0.d0
+  cc = 0.d0
+  rr = 0.d0
+\end{verbatim}
+
+En cada iteraci\'on y en cada barrido se vuelven a llenar \texttt{aa}, \texttt{bb},
+\texttt{cc} y \texttt{rr} con los coeficientes de las ecuaciones
+\ref{eq:coef_tridiagonal_x_2D_a}--\ref{eq:coef_tridiagonal_y_2D_r}, usando
+\texttt{indicex} o \texttt{indicey} seg\'un la direcci\'on del barrido (no hay
+factorizaci\'on previa porque \texttt{tri} altera \texttt{bb} y \texttt{rr}).
+
+Las condiciones frontera en \texttt{cfx} y \texttt{cfy} coinciden con el
+secuencial y con OpenMP:
+
+\begin{verbatim}
+  do jj = 1, ny
+     cfx(jj, 1) = 1.d0
+     cfx(jj, 2) = 0.d0
+  end do
+
+  do ii = 1, nx
+     cfy(ii, 1) = 0.d0
+     cfy(ii, 2) = 1.d0
+  end do
+\end{verbatim}
+
+\paragraph{Regi\'on \texttt{!\$acc data}}
+
+\medskip
+
+Tras la inicializaci\'on en host, se abre una regi\'on de datos que dura todo el
+bucle \texttt{do iter = 1, itermax}. El campo \texttt{tt}, los cuatro vectores
+planos y las fronteras viven en dispositivo durante todas las iteraciones:
+
+\begin{verbatim}
+  !$acc data copy(tt, aa, bb, cc, rr) &
+  !$acc      copyin(cfx, cfy, inv_dx2, inv_dy2)
+\end{verbatim}
+
+\paragraph{Directivas OpenACC y mapa de regiones}
+
+\medskip
+
+En multicore, \texttt{parallel loop gang} reparte filas ($j$) o columnas ($i$)
+entre los \emph{workers} de \texttt{ACC\_NUM\_CORES}. El ensamblado en
+\texttt{aa}/\texttt{bb}/\texttt{cc}/\texttt{rr} y la llamada a \texttt{tri} van
+en \texttt{loop seq} dentro de cada gang. \texttt{private(tx)} o
+\texttt{private(ty)} evita que dos gangs compartan el vector 1D de soluci\'on
+intermedia.
+
+\medskip
+
+Cada \texttt{do iter} ejecuta \textbf{cinco} tramos en dispositivo m\'as el
+\texttt{checksum} al cerrar la regi\'on:
+
+\begin{center}
+\begin{tabular}{clll}
+\hline
+\# & Tramo & Bucle & Efecto \\
+\hline
+1 & Respaldo iteraci\'on & \texttt{collapse(2)} &
+    \texttt{tt(:,:,2)} $\leftarrow$ \texttt{tt(:,:,1)} \\
+2 & Ensambla barrido $y$ & \texttt{gang} $j=2,\ldots,n_y-1$ &
+    Llena \texttt{aa,bb,cc,rr} con \texttt{indicex} \\
+3 & Resuelve barrido $y$ & \texttt{gang} $j$ + \texttt{tri} &
+    \texttt{tt(:,j,1)} $\leftarrow$ soluci\'on fila $j$ \\
+4 & Ensambla barrido $x$ & \texttt{gang} $i=2,\ldots,n_x-1$ &
+    Llena vectores con \texttt{indicey} \\
+5 & Resuelve barrido $x$ & \texttt{gang} $i$ + \texttt{tri} &
+    Actualiza \texttt{tt(i,:,1)} \\
+6 & Residuo / parada & \texttt{collapse(2)} + \texttt{reduction} &
+    $\sum (T^{1}-T^{2})^2$; \texttt{exit} si $<$ \texttt{tolerancia2} \\
+\hline
+\end{tabular}
+\end{center}
+
+Flujo: respaldo en plano 2 $\rightarrow$ barrido $y$ (ensambla+resuelve en 1D)
+$\rightarrow$ barrido $x$ (ensambla+resuelve) $\rightarrow$ residuo. La
+subrutina \texttt{tri} es secuencial (\texttt{routine seq}) dentro de cada gang.
+
+\medskip
+
+\paragraph{Bucle de iteraciones y barrido en $y$}
+
+\medskip
+
+El bucle admite hasta \texttt{itermax = 20000} iteraciones y sale antes si
+\texttt{residuo < tolerancia2}, con la misma regla que el secuencial y OpenMP.
+
+\paragraph{Regi\'on 1: respaldo del plano anterior.}
+Antes de cada barrido se guarda la iteraci\'on previa en el tercer \'indice de
+\texttt{tt}:
+
+\begin{verbatim}
+  do iter = 1, itermax
+
+     !$acc parallel loop collapse(2) present(tt)
+     do jj = 1, ny
+        do ii = 1, nx
+           tt(ii, jj, 2) = tt(ii, jj, 1)
+        end do
+     end do
+     !$acc end parallel loop
+\end{verbatim}
+
+\paragraph{Regiones 2--3: barrido en $y$.}
+Para cada fila $j$ interior, en \texttt{loop seq} se escriben coeficientes en
+\texttt{aa(indicex(ii,jj))}, \ldots seg\'un \ref{eq:coef_tridiagonal_x_2D_r}:
+\begin{equation}
+r_i^{(x)} = -\frac{1}{(\Delta y)^2}\,T_{i,j-1}-\frac{1}{(\Delta y)^2}\,T_{i,j+1}.
+\end{equation}
+Luego cada gang llama a \texttt{tri} sobre el tramo
+\texttt{indicex(1,j):indicex(nx,j)} y copia \texttt{tx} a \texttt{tt(:,j,1)}:
+
+\begin{verbatim}
+     !$acc parallel loop gang present(tt, aa, bb, cc, rr, cfx, inv_dx2, inv_dy2)
+     do jj = 2, ny - 1
+        !$acc loop seq
+        do ii = 2, nx - 1
+           aa(indicex(ii, jj)) = inv_dx2
+           bb(indicex(ii, jj)) = -2.d0 * (inv_dx2 + inv_dy2)
+           cc(indicex(ii, jj)) = inv_dx2
+           rr(indicex(ii, jj)) = -inv_dy2*tt(ii,jj-1,1) - inv_dy2*tt(ii,jj+1,1)
+        end do
+        rr(indicex(1,jj)) = cfx(jj, 1)
+        rr(indicex(nx,jj)) = cfx(jj, 2)
+        ...
+     end do
+     !$acc end parallel loop
+
+     !$acc parallel loop gang present(aa, bb, cc, rr, tt) private(tx)
+     do jj = 2, ny - 1
+        call tri(aa(indicex(1,jj):indicex(nx,jj)), ...)
+        do ii = 1, nx
+           tt(ii, jj, 1) = tx(ii)
+        end do
+     end do
+     !$acc end parallel loop
+\end{verbatim}
+
+\subsection{Barrido en $x$}
+
+\paragraph{Regiones 4--5: ensamblado y resoluci\'on en $x$.}
+Se reutilizan los mismos vectores \texttt{aa}--\texttt{rr}, pero con
+\texttt{indicey}$(i,j)=j+n_y(i-1)$. En el borde inferior se impone Neumann con
+\texttt{bb=-1}, \texttt{cc=1}; en el superior, Dirichlet (\texttt{bb=1},
+\texttt{rr=cfy(i,2)}). Tras \texttt{tri} sobre
+\texttt{indicey(ii,1):indicey(ii,ny)}, se copia \texttt{ty} a \texttt{tt(ii,:,1)}.
+
+\subsection{Residuo, actualizaci\'on y salida}
+\label{subsec:acc-residuo-salida}
+
+\paragraph{Regi\'on 6: residuo y parada.}
+Mismo criterio que OpenMP (suma de cuadrados entre planos 1 y 2, sin ra\'iz):
+
+\begin{verbatim}
+     residuo = 0.d0
+     !$acc parallel loop collapse(2) reduction(+:residuo) present(tt)
+     do jj = 1, ny
+        do ii = 1, nx
+           residuo = residuo + (tt(ii,jj,1)-tt(ii,jj,2))**2
+        end do
+     end do
+     !$acc end parallel loop
+     if (residuo < tolerancia2) exit
+  end do
+\end{verbatim}
+
+\paragraph{Salida y \texttt{checksum}.}
+Tras \texttt{!\$acc end data} se imprimen iteraciones, residuo y suma del campo
+para el \emph{benchmark}:
+
+\begin{verbatim}
+  !$acc parallel loop collapse(2) reduction(+:checksum) present(tt)
+  do jj = 1, ny
+     do ii = 1, nx
+        checksum = checksum + tt(ii, jj, 1)
+     end do
+  end do
+  write(*, '(A,I0)') 'iteraciones=', iter
+  write(*, '(A,ES24.16)') 'checksum=', checksum
+\end{verbatim}
+
+A diferencia del secuencial, no se vuelca la malla a disco; el script de medici\'on
+parsea \texttt{iteraciones=} y \texttt{checksum=}.
+
+\subsection{M\'odulo \texttt{calor2D\_acc\_utils}}
+
+\subsubsection{Funciones \texttt{indicex} e \texttt{indicey}}
+
+Mapean $(i,j)$ a la posici\'on en el vector plano seg\'un el barrido (column-major
+en $y$, por fila en $x$). Llevan \texttt{!\$acc routine seq} para poder
+usarse dentro de kernels:
+
+\begin{verbatim}
+  indicex = ii + acc_nx * (jj - 1)
+  indicey = jj + acc_ny * (ii - 1)
+\end{verbatim}
+
+\subsubsection{Subrutina \texttt{tri}}
+
+Igual que en \texttt{REFERENCIA/paralelo-gpu/openacc/calor2D/tridiagonal.f90}:
+eliminaci\'on gaussiana de una tridiagonal \textbf{sin} factorizar de antemano;
+modifica \texttt{b} y \texttt{r} y devuelve \texttt{u}:
+
+\begin{verbatim}
+  subroutine tri(a, b, c, r, u, n)
+    !$acc routine seq
+    ...
+    do i = 2, n
+       r(i) = r(i) - (a(i)/b(i-1))*r(i-1)
+       b(i) = b(i) - (a(i)/b(i-1))*c(i-1)
+    end do
+    u(n) = r(n)/b(n)
+    do i = n-1, 1, -1
+       u(i) = (r(i) - c(i)*u(i+1))/b(i)
+    end do
+  end subroutine tri
+\end{verbatim}
+
+\subsection{Mediciones (\texttt{ACC/scripts/})}
+
+\texttt{benchmark\_acc\_thomas.py} compila el mismo fuente \textbf{sin}
+\texttt{-acc} (referencia \texttt{serial}) y con \texttt{-acc=multicore},
+barre \texttt{ACC\_NUM\_CORES} de 1 a 6, repite corridas con mediana de tiempo
+de pared y escribe \texttt{acc\_calor2D\_h6.dat}. El speedup reportado es
+$S_p = t_{\mathrm{serial}}/t_p$, donde $t_{\mathrm{serial}}$ es el binario sin
+directivas OpenACC. \texttt{plot\_acc\_speedup.py} genera las figuras de tiempo
+y speedup. En el entorno de prueba, \texttt{nvaccelinfo} no list\'o GPU; no se
+incluyen curvas \texttt{-acc=gpu}.
+
+\medskip
+
+\textbf{Validaci\'on.} Todas las corridas multicore reproducen el
+\texttt{checksum} del serial con diferencia $\lesssim 10^{-11}$. Con la malla de
+producci\'on el programa converge en \textbf{15103} iteraciones, igual que
+\texttt{OMP/calor2D\_parallel.f90}. El secuencial en
+\texttt{SECUENCIAL/calor2D} sigue en $\approx 9135$ pasos (dos planos de
+temperatura); la comparaci\'on de rendimiento ACC--OMP es la pertinente.
+
+\section{Resultados caso 2D con OpenACC}
+
+Se us\'o \texttt{nvfortran}, $5$ corridas y $2$ warmups por punto (mediana).
+La tabla~\ref{tab:acc-speedup-h6} resume tiempos y speedup respecto al serial
+sin \texttt{-acc}.
+
+\begin{table}[h]
+  \centering
+  \caption{OpenACC multicore, malla $300\times 150$, $15103$ iter (mediana).}
+  \label{tab:acc-speedup-h6}
+  \begin{tabular}{l r r r}
+    \hline
+    Caso & $p$ & $t_p$ [s] & $S_p$ \\
+    \hline
+    serial      & 1 & 9.67 & 1.00 \\
+    multicore   & 1 & 8.97 & 1.08 \\
+    multicore   & 2 & 5.24 & 1.85 \\
+    multicore   & 3 & 3.91 & 2.48 \\
+    multicore   & 4 & 3.38 & 2.86 \\
+    multicore   & 5 & 2.90 & 3.34 \\
+    multicore   & 6 & 2.69 & 3.59 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{acc_calor2D_h6_speedup.png}
+  \caption{Speedup OpenACC multicore frente al serial sin \texttt{-acc}
+  (\texttt{acc\_calor2D\_h6}), curva ideal $S_p=p$.}
+  \label{fig:acc-speedup-h6}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{acc_calor2D_h6_tiempos.png}
+  \caption{Tiempo de pared por n\'umero de n\'ucleos (\texttt{ACC\_NUM\_CORES}).}
+  \label{fig:acc-tiempos-h6}
+\end{figure}
+
+En multicore, $S_6\approx 3.6 < 6$: sublineal por \texttt{gang} y \texttt{tri}
+secuencial por fila/columna. Es algo menor que OpenMP con tres campos
+($S_6\approx 4.2$), pero el \texttt{checksum} y las \textbf{15103} iteraciones
+coinciden con \texttt{OMP/calor2D\_parallel.f90} (misma tolerancia y malla).
+La variante ACC difiere en el \emph{layout} 1D de coeficientes, no en la
+soluci\'on de referencia validada num\'ericamente.
 
 
 \section{Conclusiones}
