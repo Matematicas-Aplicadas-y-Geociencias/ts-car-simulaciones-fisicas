@@ -7,7 +7,7 @@ Program Calor2D
   ! Iteradores y tamaño del problema
   !
   integer :: ii, jj, iter
-  integer, parameter :: nx = 60, ny = 30, itermax=10000
+  integer, parameter :: nx = 300, ny = 150, itermax=20000
   !
   ! Variables del dominio computacional
   !
@@ -81,28 +81,30 @@ Program Calor2D
      by_base(jj) = -2.d0*(inv_dx2 + inv_dy2)
      cy(jj) = inv_dy2
   end do
+  ! Borde inferior (jj=1, y=0): Neumann, flujo nulo
   ay(1) = 0.d0
   by_base(1) = -1.d0
   cy(1) = 1.d0
-  ay(ny) = -1.d0
+  ! Borde superior (jj=ny, y=Ly): Dirichlet T=1
+  ay(ny) = 0.d0
   by_base(ny) = 1.d0
   cy(ny) = 0.d0
   !
   call tri_factor(ax,bx_base,cx,cpx,denx,nx)
   call tri_factor(ay,by_base,cy,cpy,deny,ny)
   !
-  ! Condiciones de frontera en direcci'on x
+  ! Fronteras en x: Dirichlet T=1 (izq), T=0 (der)
   !
   do ii = 1, ny
      cfx(ii,1) = 1.d0
      cfx(ii,2) = 0.d0
   end do
   !
-  ! Condiciones de frontera en direcci'on y
+  ! Fronteras en y: Neumann q=0 (abajo, jj=1), Dirichlet T=1 (arriba, jj=ny)
   !
   do jj = 1, nx
      cfy(jj,1) = 0.d0
-     cfy(jj,2) = 0.d0
+     cfy(jj,2) = 1.d0
   end do
   !
   bucle_iteraciones: do iter = 1, itermax
@@ -182,11 +184,12 @@ Program Calor2D
   end do bucle_iteraciones
   write(*,*) "Convergencia en ", iter, " iteraciones"
   !
+  open(unit=101, file='resultados/tablas/resultado_malla.dat', status='replace', action='write')
   do jj = 1, ny
      do ii = 1, nx
-        write(*,*) (ii-1)*deltax, (jj-1)*deltay, tt(ii,jj,1)
+        write(101,*) (ii-1)*deltax, (jj-1)*deltay, tt(ii,jj,1)
      end do
-     write(*,*) ' '
   end do
+  close(101)
   !
 end Program Calor2D
