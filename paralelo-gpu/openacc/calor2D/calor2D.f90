@@ -88,13 +88,17 @@ Program Calor2D
   bucle_iteraciones: do iter = 1, itermax
      !
      ! Inicializamos el valor de la iteraci'on anterior
-     !$omp parallel do
+     !
+     ! Es posible 'colapsar' bucles anidados con la instrucci'on collapse(n).
+     ! El compilador combina los 'indices y crea un solo bucle mas grande
+     !
+     !$acc parallel loop collapse(2)
      do jj = 2, ny-1
         do ii = 2, nx-1
            tt(ii,jj,2) = tt(ii,jj,1)
         end do
      end do
-     !$omp end parallel do
+     !$acc end parallel loop
      !
      !---------------------------------------------------------------
      !
@@ -102,7 +106,7 @@ Program Calor2D
      ! compuestas por grupos de l'ineas, observamos que si usamos pocas
      ! l'ineas tenemos una aceleraci'on pobre o ausente
      !
-     !$acc parallel loop
+     !$acc parallel loop collapse(2)
      barrido_y: do jj = 2, ny-1
         !
         ! Es posible combinar directivas de openmp, por ejemplo,
@@ -122,7 +126,13 @@ Program Calor2D
            !
         end do ensambla_tri_x
         !
-        ! Impone cond. frontera
+     end do barrido_y
+     !$acc end parallel loop
+     !
+     ! Impone cond. frontera
+     !
+     !$acc parallel loop
+     impone_cond_frontx: do jj = 2, ny-1
         !
         aa(indicex(1,jj))     = 0.d0 ! no se usa en los c'alculos
         bb(indicex(1,jj))     = 1.d0
@@ -134,14 +144,12 @@ Program Calor2D
         cc(indicex(nx,jj))     = 0.d0
         rr(indicex(nx,jj))     = cfx(jj,2)
         !
-     end do barrido_y
+     end do impone_cond_frontx
      !$acc end parallel loop
      !
      ! Resolvemos los problemas de matrices tridiagonales a la vez
      !
-     !$omp parallel do default(none) &
-     !$omp shared( tt, aa, bb, cc, rr ) &
-     !$omp private( tx )
+     !$acc parallel loop
      inversor_y: do jj = 2, ny-1
         !
         ! Resolver el problema algebraico
@@ -159,16 +167,15 @@ Program Calor2D
         ! end do
         !
      end do inversor_y
-     !$omp end parallel do
+     !$acc end parallel loop
+     !
      !---------------------------------------------------------------
      !
      ! Paralelizamos el barrido en la direcci'on x en bandas
      ! compuestas por grupos de l'ineas, observamos que si usamos pocas
      ! l'ineas tenemos una aceleraci'on pobre o ausente
      !
-     !$omp parallel do default(none) &
-     !$omp shared(  deltax, deltay, tt, cfy, &
-     !$omp aa, bb, cc, rr) 
+     !$acc parallel loop collapse(2)
      barrido_x: do ii = 2, nx-1
 
         ensambla_tri_y: do jj = 2, ny-1
@@ -184,6 +191,12 @@ Program Calor2D
            !
         end do ensambla_tri_y
         !
+     end do barrido_x
+     !$acc end parallel loop
+     !
+     !$acc parallel loop
+     cond_front_y: do ii = 2, nx-1
+        !
         ! Impone cond. frontera
         !
         aa(indicey(ii,1))     = 0.d0 ! no se usa en los c'alculos
@@ -196,13 +209,12 @@ Program Calor2D
         cc(indicey(ii,ny))    = 0.d0 ! no se usa en los c'alculos
         rr(indicey(ii,ny))    = cfy(ii,2)
         !
-     end do barrido_x
-     !$omp end parallel do
+     end do cond_front_y
+     !$acc end parallel loop
      !
      ! Resolvemos los problemas de matrices tridiagonales a la vez
      !
-     !$omp parallel do default(none) &
-     !$omp shared( tt, aa, bb, cc, rr, ty )
+     !$acc parallel loop
      inversor_x: do ii = 2, nx-1
         !
         ! Resolver el problema algebraico
@@ -220,12 +232,13 @@ Program Calor2D
         end do
         !
      end do inversor_x
-     !$omp end parallel do
+     !$acc end parallel loop
      !
      ! Criterio de convergencia
      !
      residuo = 0.d0
-     !$omp parallel do reduction(+:residuo)
+     !
+     !$acc parallel loop reduction(+:residuo)
      do ii = 2, nx-1
         do jj = 2, ny-1
            
@@ -233,7 +246,7 @@ Program Calor2D
            
         end do
      end do
-     !$omp end parallel do
+     !$acc end parallel
      !
      residuo = sqrt(residuo)
      !

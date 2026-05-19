@@ -6,16 +6,17 @@ subroutine tri(a,b,c,r,u,n)
   ! elementos a, b, c
   ! y devuelve el valor de u
   !
-  implicit none
   !
-  !$acc routine
+  !$acc routine seq
+  !
+  implicit none
   !
   integer,          intent(in)    :: n
   double precision, intent(in)    :: a(n),c(n)
   double precision, intent(inout) :: b(n),r(n)
   double precision, intent(inout) :: u(n)
   integer :: i
-
+  !
   u=0.d0
   ! eliminacion elementos bajo la matriz
   gausselim: do i=2,n

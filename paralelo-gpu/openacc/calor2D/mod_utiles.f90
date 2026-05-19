@@ -4,7 +4,7 @@ module utiles
   !
   ! Iteradores y tamaño del problema
   !
-  integer, parameter :: nx = 480, ny = 240, itermax=10000
+  integer, parameter :: nx = 48, ny = 24, itermax=10000
   !
 contains
   !
@@ -13,7 +13,7 @@ contains
     ! Esta subrutina eval'ua el laplaciano de un campo escalar y devuelve
     ! su elemento m'as grande
     !
-    use omp_lib
+    use openacc
     !
     implicit none
     !
@@ -157,5 +157,5 @@ contains
     ! 140 FORMAT(A,I10);
     !
   end subroutine postproceso_vtk
-  
+  !
 end module utiles
