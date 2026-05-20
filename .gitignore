@@ -56,12 +56,25 @@ PROYECTO/*.out
 PROYECTO/*.synctex.gz
 PROYECTO/*.toc
 
+# Benchmark outputs (regenerables)
+OMP/calor2D/figures/*.png
+OMP/calor2D/tables/*.dat
+OMP/calor2D/*.mod
+ACC/figures/*.png
+ACC/tables/*.dat
+ACC/logs/
+
 # Build / run artifacts
-OMP/build/
+OMP/calor2D/build/
 ACC/build/
 ACC/bin/
-SECUENCIAL/calor2D/solucion.dat
-SECUENCIAL/calor2D/*.png
+SECUENCIAL/calor1D/build/
+SECUENCIAL/calor1D/resultados/
+SECUENCIAL/calor2D/build/
+SECUENCIAL/calor2D/resultados/
 SECUENCIAL/calor1D/fort.101
 ACC/legacy/**/ejemplo
 ACC/legacy/**/ejemploArreglo
+
+# C\'odigo de referencia (main branch)
+REFERENCIA/
