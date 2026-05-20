@@ -6,6 +6,7 @@ Program Calor2D
   use utiles, only : residuo_temp
   use utiles, only : nx, ny, itermax
   use utiles, only : indicex, indicey
+  use utiles, only : tri
   !
   Implicit none
   !
@@ -149,7 +150,7 @@ Program Calor2D
      !
      ! Resolvemos los problemas de matrices tridiagonales a la vez
      !
-     !$acc parallel loop
+     !$acc parallel loop gang
      inversor_y: do jj = 2, ny-1
         !
         ! Resolver el problema algebraico
