@@ -1,18 +1,14 @@
 # OMP
 
-## `paralelo/calor2D/`
+Solo dos carpetas de código:
 
-Fuentes OpenMP del solver 2D (`calor2D_parallel.f90`, `calor2D_utils.f90`, `residuo.f90`, etc.).
+| Carpeta | Contenido |
+|---------|-----------|
+| **`calor2D/`** | Solver 2D OpenMP, scripts, `build/`, `tables/`, `figures/`, `resultados/` |
+| **`openmp_basics/`** | Ejemplos introductorios (`hello_openmp`, producto punto, etc.) |
 
-## `paralelo/openmp_basics/`
-
-Ejemplos introductorios de OpenMP.
-
-## `scripts/`
-
-- `benchmark_aceleracion.py` — compila en `build/`, escribe en `PROYECTO/`
-- `plot_comparacion_speedup.py`
+Todo lo del caso 2D (fuentes, benchmark, comparación con secuencial) está en **`OMP/calor2D/`** — ver `calor2D/README.md`.
 
 ```bash
-python3 OMP/scripts/benchmark_aceleracion.py --max-threads 8 --runs 10
+python3 OMP/calor2D/scripts/benchmark_aceleracion.py --max-threads 8 --runs 10
 ```

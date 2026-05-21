@@ -13,9 +13,12 @@
 \usepackage{caption}
 \usepackage[hidelinks]{hyperref}
 \usepackage{float}
+\usepackage{array}
+\newcolumntype{M}[1]{>{\raggedright\arraybackslash}p{#1}}
 
 \geometry{margin=1.5cm}
-\graphicspath{{../SECUENCIAL/calor1D/resultados/figuras/}{../SECUENCIAL/calor2D/resultados/figuras/}{../OMP/figures/}{../ACC/figures/}}
+% Rutas con y sin ..: compilar desde PROYECTO/ o desde la raiz del repo
+\graphicspath{{../SECUENCIAL/calor1D/resultados/figuras/}{../SECUENCIAL/calor2D/resultados/figuras/}{../OMP/calor2D/figures/}{../ACC/figures/}{SECUENCIAL/calor1D/resultados/figuras/}{SECUENCIAL/calor2D/resultados/figuras/}{OMP/calor2D/figures/}{ACC/figures/}}
 
 \title{TEMAS SELECTOS DE C\'OMPUTO DE ALTO RENDIMIENTO PARA SIMULACIONES F\'ISICAS\\
 Analisis Num\'erico y Computacional\\
@@ -1751,13 +1754,14 @@ Archivo & Rol en la compilaci\'on habitual \\
 \end{center}
 
 A fin de realizar mediciones de escalamiento, se crean scripts en Python. El 
-\emph{benchmark} de aceleraci\'on (\texttt{OMP/scripts/benchmark\_aceleracion.py}) compila
+\emph{benchmark} de aceleraci\'on (\texttt{OMP/calor2D/scripts/benchmark\_aceleracion.py}) compila
 \texttt{calor2D\_utils.f90} + \texttt{calor2D\_parallel.f90} y escribe el binario en
-\texttt{OMP/build/} y guarda tablas y figuras en \texttt{OMP/tables/} y \texttt{OMP/figures/}.
+\texttt{OMP/calor2D/build/} y guarda tablas y figuras en \texttt{OMP/calor2D/tables/} y
+\texttt{OMP/calor2D/figures/}.
 
 \medskip
 
-Nota: En \texttt{OMP/openmp\_basics/} hay ejemplos introductorios 
+Nota: En \texttt{OMP/openmp\_basics/} hay ejemplos
 (\texttt{hello\_openmp}, producto escalar, etc.) independientes del solver 2D.
 
 \paragraph{Programa principal: cabecera y variables}
@@ -1909,6 +1913,33 @@ paralelo es \texttt{do jj} y en la lista \texttt{private} aparece \texttt{ii}
 
 \medskip
 
+\textbf{Criterio general.}
+\begin{itemize}
+  \item \texttt{shared}: arreglos o escalares que \textbf{varios hilos deben ver}
+        con el mismo valor global (lectura de la malla, coeficientes de Thomas
+        ya factorizados, fronteras \texttt{cfx}/\texttt{cfy}) o que reciben
+        escrituras en \textbf{nodos distintos} del mismo arreglo (cada hilo toca
+        su fila $j$ o columna $i$).
+  \item \texttt{private}: buffers 1D \textbf{por hilo} (\texttt{rx}, \texttt{tx},
+        \texttt{ry}, \texttt{ty}). En el programa se declaran una sola vez
+        (\texttt{rx(nx)}, \texttt{tx(nx)}, \ldots); sin \texttt{private}, todos
+        los hilos compartir\'ian el \emph{mismo} vector en memoria. Cada
+        iteraci\'on del \texttt{do} paralelo arma el segundo miembro de
+        \emph{una} l\'inea y llama a \texttt{tri\_solve}, que \textbf{sobrescribe}
+        \texttt{rx} (o \texttt{ry}) durante la eliminaci\'on; si el vector fuera
+        \texttt{shared}, un hilo pisar\'ia los coeficientes que otro est\'a usando
+        y la soluci\'on 1D ser\'ia incorrecta (condici\'on de carrera). Los \'indices del bucle \textbf{interior}
+        (\texttt{ii} o \texttt{jj}) se listan como \texttt{private} aunque el
+        del \texttt{parallel do} ya lo es por defecto.
+  \item \texttt{reduction}: acumuladores globales (\texttt{res} en el residuo)
+        que varios hilos actualizan de forma segura.
+  \item Lo que \textbf{no} aparece en la regi\'on (\texttt{iter}, \texttt{residuo},
+        \texttt{tolerancia2}, \texttt{ax} sin usar a\'un, etc.) no se usa dentro
+        del \texttt{parallel do} y queda fuera del alcance de la regi\'on.
+\end{itemize}
+
+\medskip
+
 Cada paso del \texttt{do iter = 1, itermax} ejecuta \textbf{seis} tramos OpenMP
 m\'as una llamada a subrutina con paralelismo interno:
 
@@ -1934,11 +1965,7 @@ residuo $\rightarrow$ \texttt{tt\_old}. No hay \texttt{!\$omp} dentro de
 \texttt{tri\_solve}: cada hilo resuelve su sustituci\'on 1D en serie sobre su $r$
 privado.
 
-\medskip
-
 \paragraph{Bucle de iteraciones y barrido en $y$}
-
-\medskip
 
 El bucle externo admite hasta \texttt{itermax = 20000} iteraciones, pero sale antes si
 el residuo cumple la tolerancia (igual que en el secuencial).
@@ -1946,7 +1973,7 @@ el residuo cumple la tolerancia (igual que en el secuencial).
 \paragraph{Regi\'on 1: bordes en $y$ antes del barrido.}
 Las filas $j=1$ y $j=n_y$ no se actualizan en el \texttt{do jj = 2, ny-1}
 siguiente; se copian desde \texttt{tt\_old} para conservar el estado en esos
-nodos hasta que el barrido en $x$ imponga las ecuaciones de frontera en $y$:
+nodos hasta que el barrido en $x$ imponga las ecuaciones de frontera en $y$. Asimismo,
 
 \begin{verbatim}
   !-----------------------------------------------
@@ -1969,15 +1996,114 @@ nodos hasta que el barrido en $x$ imponga las ecuaciones de frontera en $y$:
      !$omp end parallel do
 \end{verbatim}
 
+\noindent\textbf{Variables (regi\'on 1).}
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}llM{7.6cm}@{}}
+\hline
+Cl\'ausula & Variable & Motivo \\
+\hline
+\texttt{shared} & \texttt{tt\_old}, \texttt{tt\_mid} &
+Ambas mallas deben ser visibles para todos los hilos: se \textbf{lee} en
+\texttt{tt\_old} y se \textbf{escribe} en \texttt{tt\_mid} en los nodos de borde
+$j=1$ y $j=n_y$. Cada hilo recibe un \texttt{ii} distinto y solo actualiza
+\texttt{tt\_mid(ii,1)} y \texttt{tt\_mid(ii,ny)}. \\
+\texttt{private} & \texttt{ii} &
+Es el contador del \texttt{do ii} paralelo: cada hilo debe tener su propio
+\texttt{ii} para saber en qu\'e \textbf{columna} copia los bordes. \\
+\hline
+\end{tabular}
+\end{center}
+
 \paragraph{Regi\'on 2: barrido en $y$ (l\'ineas horizontales).}
 Cada hilo toma una o varias filas $j\in\{2,\ldots,n_y-1\}$. En el bucle interior
 \texttt{do ii = 2, nx-1} se arma el segundo miembro seg\'un la ecuaci\'on
 \ref{eq:coef_tridiagonal_x_2D_r}, usando los vecinos en $y$ de \texttt{tt\_old}:
+
 \begin{equation}
 r_i^{(x)} = -\frac{1}{(\Delta y)^2}\,T_{i,j-1}-\frac{1}{(\Delta y)^2}\,T_{i,j+1}.
 \end{equation}
+
 Luego se imponen Dirichlet en $x$ con \texttt{cfx(jj,1)} y \texttt{cfx(jj,2)},
 se resuelve con \texttt{tri\_solve} y se copia \texttt{tx} a \texttt{tt\_mid(:,jj)}:
+
+\begin{verbatim}
+     !$omp parallel do default(none) &
+     !$omp shared(inv_dy2,tt_old,tt_mid,cfx,ax,cpx,denx) &
+     !$omp private(rx,tx,ii) schedule(static)
+     do jj = 2, ny-1
+
+        do ii = 2, nx - 1
+           rx(ii) = -inv_dy2*tt_old(ii,jj-1) - inv_dy2*tt_old(ii,jj+1)
+        end do
+
+        rx(1)  = cfx(jj,1)
+        rx(nx) = cfx(jj,2)
+
+        call tri_solve(ax, cpx, denx, rx, tx, nx)
+
+        do ii = 1, nx
+           tt_mid(ii,jj) = tx(ii)
+        end do
+     end do
+     !$omp end parallel do
+\end{verbatim}
+
+\noindent\textbf{Variables (regi\'on 2).}
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}llM{7.6cm}@{}}
+\hline
+Cl\'ausula & Variable & Motivo \\
+\hline
+\texttt{shared} & \texttt{inv\_dy2} &
+Es un escalar fijado al inicio ($1/\Delta y^2$): todos los hilos ensamblan el
+segundo miembro con el \textbf{mismo} paso en $y$. No se escribe dentro de la
+regi\'on, solo se lee; \texttt{shared} evita copias innecesarias. \\
+\texttt{shared} & \texttt{tt\_old} &
+Cada hilo con un $j$ distinto \textbf{lee} vecinos en $y$,
+\texttt{tt\_old(i,j$\pm$1)}, para armar \texttt{rx(i)} a lo largo de su fila.
+Ning\'un hilo escribe en \texttt{tt\_old} aqu\'i; las lecturas en filas vecinas
+son seguras porque esas filas no se modifican en este barrido. \\
+\texttt{shared} & \texttt{tt\_mid} &
+Tras \texttt{tri\_solve}, cada hilo escribe \textbf{solo} \texttt{tt\_mid(:,jj)}
+con su $j$ del \texttt{do jj} paralelo. Dos hilos no comparten la misma fila $j$,
+as\'i que no hay escrituras concurrentes en el mismo nodo. \\
+\texttt{shared} & \texttt{cfx} &
+Contiene los valores de Dirichlet en $x$ para cada fila $j$
+(\texttt{cfx(jj,1)}, \texttt{cfx(jj,2)}). Todos los hilos \textbf{leen} la fila
+que les toca; la tabla es de solo lectura en esta regi\'on. \\
+\texttt{shared} & \texttt{ax}, \texttt{cpx}, \texttt{denx} &
+Coeficientes de la factorizaci\'on Thomas en $x$, calculados \textbf{una vez} antes
+del bucle temporal. \texttt{tri\_solve} solo los consulta; no se alteran dentro del
+\texttt{parallel do}, por lo que son visibles para todos los hilos. \\
+\texttt{private} & \texttt{rx}, \texttt{tx} &
+En el programa existen \textbf{un solo} \texttt{rx(nx)} y \texttt{tx(nx)}; sin
+\texttt{private}, todos los hilos compartir\'ian esa memoria. Cada $j$ rellena
+\texttt{rx} con el segundo miembro de \emph{su} fila y llama a \texttt{tri\_solve},
+que sobrescribe \texttt{rx} (\texttt{intent(inout)}) y deja la soluci\'on en
+\texttt{tx}: otro hilo no puede usar el mismo vector a la vez. \texttt{private}
+crea una copia local de tama\~no $n_x$ por hilo (coste de memoria, correcci\'on). \\
+\texttt{private} & \texttt{ii} &
+Pertenece al \texttt{do ii} \textbf{interior} (ensamblado y copia a
+\texttt{tt\_mid}), no al \texttt{do jj} paralelo. Cada hilo debe avanzar su propio
+\texttt{ii} sin interferir con el bucle interno de otro hilo. \\
+\texttt{(impl\'icito)} & \texttt{jj} &
+Es el \'indice del \texttt{do jj} asociado al \texttt{parallel do}: OpenMP lo trata
+como privado por defecto. Identifica la fila $j$ que ese hilo ensambla y resuelve. \\
+\hline
+\end{tabular}
+\end{center}
+
+\paragraph{Barrido en $x$}
+
+\medskip
+
+\paragraph{Regi\'on 3: bordes en $x$.}
+Las columnas $i=1$ y $i=n_x$ no entran en \texttt{do ii = 2, nx-1}; se copian de
+\texttt{tt\_mid} a \texttt{tt\_new} (valores ya fijados por el barrido en $y$ en
+esos bordes laterales). Las cl\'ausulas se detallan en la tabla 
+\textbf{Variables (regi\'on 3)}.
 
 \begin{verbatim}
      !-----------------------------------------------   
@@ -1993,37 +2119,27 @@ se resuelve con \texttt{tri\_solve} y se copia \texttt{tx} a \texttt{tt\_mid(:,j
         tt_new(nx, jj) = tt_mid(nx, jj)
      end do
      !$omp end parallel do
-     !$omp parallel do default(none) &
-     !$omp shared(inv_dy2,tt_old,tt_mid,cfx,ax,cpx,denx) &
-     !$omp private(rx,tx,ii) schedule(static)
-     do jj = 2, ny-1
-
-        do ii = 2, nx-1
-           rx(ii) = -inv_dy2*tt_old(ii,jj-1) &
-                    -inv_dy2*tt_old(ii,jj+1)
-        end do
-        rx(1)  = cfx(jj,1)
-        rx(nx) = cfx(jj,2)
-
-        call tri_solve(ax, cpx, denx, rx, tx, nx)
-
-        do ii = 1, nx
-           tt_mid(ii,jj) = tx(ii)
-        end do
-     end do
-     !$omp end parallel do
 \end{verbatim}
 
-\texttt{ax}, \texttt{cpx} y \texttt{denx} son \texttt{shared} (solo lectura);
-\texttt{rx} y \texttt{tx} son \texttt{private} porque \texttt{tri\_solve} modifica
-\texttt{rx} in situ.
-
-\subsection{Barrido en $x$}
-
-\paragraph{Regi\'on 3: bordes en $x$.}
-Las columnas $i=1$ y $i=n_x$ no entran en \texttt{do ii = 2, nx-1}; se copian de
-\texttt{tt\_mid} a \texttt{tt\_new} (valores ya fijados por el barrido en $y$ en
-esos bordes laterales).
+\noindent\textbf{Variables (regi\'on 3).}
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}llM{7.6cm}@{}}
+\hline
+Cl\'ausula & Variable & Motivo \\
+\hline
+\texttt{shared} & \texttt{tt\_mid}, \texttt{tt\_new} &
+Se copian los bordes laterales $i=1$ e $i=n_x$ antes del barrido interior en $x$.
+Cada hilo tiene un \texttt{jj} distinto y solo asigna \texttt{tt\_new(1,jj)} y
+\texttt{tt\_new(nx,jj)}: lectura en \texttt{tt\_mid}, escritura en \texttt{tt\_new}
+sin solapamiento entre hilos. \\
+\texttt{private} & \texttt{jj} &
+Contador del \texttt{do jj} paralelo sobre todas las columnas $j$. Debe ser
+privado para que cada hilo sepa qu\'e columna del borde lateral est\'a copiando;
+se declara por \texttt{default(none)}. \\
+\hline
+\end{tabular}
+\end{center}
 
 \paragraph{Regi\'on 4: barrido en $x$ (columnas verticales).}
 Para cada $i$ interior se ensambla $r_j^{(y)}$ con la ecuaci\'on
@@ -2040,9 +2156,9 @@ $a_1,b_1,c_1$ y $a_{n_y},b_{n_y},c_{n_y}$ (ya en \texttt{by\_base} v\'ia
      do ii = 2, nx-1
 
         do jj = 2, ny-1
-           ry(jj) = -inv_dx2*tt_mid(ii-1,jj) &
-                    -inv_dx2*tt_mid(ii+1,jj)
+           ry(jj) = -inv_dx2*tt_mid(ii-1,jj) - inv_dx2*tt_mid(ii+1,jj)
         end do
+
         ry(1)  = cfy(ii,1)
         ry(ny) = cfy(ii,2)
 
@@ -2051,11 +2167,62 @@ $a_1,b_1,c_1$ y $a_{n_y},b_{n_y},c_{n_y}$ (ya en \texttt{by\_base} v\'ia
         do jj = 1, ny
            tt_new(ii,jj) = ty(jj)
         end do
+
      end do
      !$omp end parallel do
 \end{verbatim}
 
-\subsection{Residuo, actualizaci\'on y salida}
+\noindent\textbf{Variables (regi\'on 4).}
+
+\medskip
+
+\noindent\textit{Nota.} Las constantes \texttt{nx} y \texttt{ny} se declaran en el
+programa como \texttt{integer, parameter}; en OpenMP tienen atributo de datos
+predeterminado \texttt{shared}. Con \texttt{default(none)} no hace falta listarlas
+en la cl\'ausula \texttt{shared} (s\'i en subrutinas, donde son argumentos
+\texttt{intent(in)}, p.\,ej.\ \texttt{calc\_residuo2}).
+
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}llM{7.6cm}@{}}
+\hline
+Cl\'ausula & Variable & Motivo \\
+\hline
+\texttt{shared} & \texttt{inv\_dx2} &
+Escalar $1/\Delta x^2$ com\'un a todo el dominio; entra en el ensamblado del
+segundo miembro en $x$ para todas las columnas. Solo lectura dentro de la regi\'on. \\
+\texttt{shared} & \texttt{tt\_mid} &
+Cada hilo con su $i$ lee \texttt{tt\_mid(i$\pm$1,j)} para construir
+\texttt{ry(j)}. No se escribe en \texttt{tt\_mid} en este barrido; las columnas
+vecinas no se pisan entre hilos en esta fase. \\
+\texttt{shared} & \texttt{tt\_new} &
+Tras resolver la tridiagonal en $y$, el hilo escribe \texttt{tt\_new(ii,:)} entero.
+Cada \texttt{ii} del \texttt{parallel do} es distinto, de modo que dos hilos no
+escriben el mismo $(i,j)$ a la vez. \\
+\texttt{shared} & \texttt{cfy} &
+Fronteras en $y$ (Neumann/Dirichlet) para la columna $i$ del hilo:
+\texttt{cfy(ii,1)}, \texttt{cfy(ii,2)}. Tabla de solo lectura compartida. \\
+\texttt{shared} & \texttt{ay}, \texttt{cpy}, \texttt{deny} &
+Factorizaci\'on Thomas en $y$ precalculada; \texttt{tri\_solve} solo consulta estos
+arreglos. Igual que \texttt{ax,cpx,denx} en la regi\'on~2, deben verse desde todos
+los hilos. \\
+\texttt{private} & \texttt{ry}, \texttt{ty} &
+Misma l\'ogica que \texttt{rx,tx}: un \'unico \texttt{ry(ny),ty(ny)} en el programa.
+Cada columna $i$ llena \texttt{ry}, \texttt{tri\_solve} destruye/reusa \texttt{ry} y
+deja la soluci\'on en \texttt{ty}. Con \texttt{shared} habr\'ia carrera entre hilos;
+\texttt{private} da un buffer 1D por hilo de longitud $n_y$. \\
+\texttt{private} & \texttt{jj} &
+\'Indice del bucle interior sobre $j$ (ensamblado y copia). No es el del
+\texttt{parallel do} (\texttt{ii}); cada hilo avanza su \texttt{jj} de forma
+independiente. \\
+\texttt{(impl\'icito)} & \texttt{ii} &
+\'Indice del \texttt{do ii} paralelo: identifica la columna vertical que el hilo
+resuelve. Privado por defecto al estar ligado al \texttt{parallel do}. \\
+\hline
+\end{tabular}
+\end{center}
+
+\paragraph{Residuo, actualizaci\'on y salida}
 \label{subsec:omp-residuo-salida}
 
 \paragraph{Regi\'on 5.}
@@ -2064,30 +2231,47 @@ $T^{\mathrm{new}}-T^{\mathrm{old}}$ en todos los nodos) se calcula en el m\'odul
 Compara el campo tras el barrido en $x$ (\texttt{tt\_new}) con el de inicio de
 iteraci\'on (\texttt{tt\_old}), no con \texttt{tt\_mid}.
 
-\paragraph{Criterio de parada.}
+\begin{verbatim}
+     ! --------------------------------
+     ! 3. Residuo
+     ! --------------------------------
+     ! Calcula el residuo entre tt_new y tt_old
+     ! --------------------------------
+     call calc_residuo2(tt_new, tt_old, nx, ny, residuo) ! Paralelizado en el m\'odulo calor2D_utils
+     ! --------------------------------
+\end{verbatim}
+
+\paragraph{Criterio de convergencia.}
 Tras \texttt{calc\_residuo2}, el programa sale del bucle si
 \texttt{residuo < tolerancia2}, con la misma regla que el secuencial. El
 \texttt{write} final informa el \texttt{iter} real alcanzado (no necesariamente
 \texttt{itermax}). En pruebas locales con un hilo, la versi\'on OpenMP converge
 en un n\'umero de pasos distinto al secuencial (p.\,ej.\ $\sim 1.5\times 10^4$
 frente a $9135$), por el esquema de tres campos y las copias expl\'icitas de
-bordes antes de cada barrido; el speedup entre hilos sigue siendo comparable
-porque el conteo de iteraciones es determinista para un mismo binario y malla.
+bordes antes de cada barrido.
 
 \paragraph{Regi\'on 6.}
 Tras evaluar convergencia, se prepara la siguiente iteraci\'on global:
 
 \begin{verbatim}
-     call calc_residuo2(tt_new, tt_old, nx, ny, residuo)
+     ! --------------------------------
+     ! 3.1. Criterio de convergencia
+     ! --------------------------------
+     ! Si el residuo es menor que la tolerancia, se sale del bucle
+     ! --------------------------------   
      if (residuo < tolerancia2) then
         exit
      end if
-
+     ! --------------------------------
+     ! 4. Actualizaci\'on de tt_old
+     ! --------------------------------
+     ! Actualiza tt_old con tt_new
+     ! --------------------------------
      !$omp parallel do default(none) &
-     !$omp shared(tt_new,tt_old) private(ii,jj) collapse(2) schedule(static)
+     !$omp shared(tt_new, tt_old) private(ii, jj) collapse(2) schedule(static)
      do ii = 1, nx
         do jj = 1, ny
-           tt_old(ii,jj) = tt_new(ii,jj)
+           tt_old(ii, jj) = tt_new(ii, jj)
         end do
      end do
      !$omp end parallel do
@@ -2098,17 +2282,78 @@ Tras evaluar convergencia, se prepara la siguiente iteraci\'on global:
 \end{verbatim}
 
 \texttt{collapse(2)} fusiona los bucles \texttt{ii} y \texttt{jj} en un solo
-espacio de iteraci\'on de tama\~no $n_x n_y$, repartiendo m\'as grano fino entre
-hilos cuando $n_x$ o $n_y$ son moderados.
+espacio de iteraci\'on de tama\~no $n_x \times n_y$, de modo que el
+\texttt{parallel do} reparte nodos en lugar de solamente filas. La tarea pasa de grano
+grueso a grano fino. El efecto es m\'as notable cuando \texttt{nx} es pequeño
+frente al n\'umero de hilos, o cuando $n_x \times n_y$ es mucho mayor que \texttt{nx}.
 
-\paragraph{Salida a disco.}
-A diferencia del secuencial, el ejecutable OpenMP no escribe
-\texttt{resultado\_malla.dat}; el \emph{benchmark} solo mide tiempo de pared y
-parsea la l\'inea ``Convergencia en \ldots iteraciones'' del \texttt{write} final.
-Para comparar campos con el secuencial habr\'ia que a\~nadir una escritura
-an\'aloga al final del programa o en el script de medici\'on.
+\medskip
 
-\subsection{M\'odulo \texttt{calor2D\_utils}}
+\noindent\textbf{Variables (regi\'on 6).}
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}llM{7.6cm}@{}}
+\hline
+Cl\'ausula & Variable & Motivo \\
+\hline
+\texttt{shared} & \texttt{tt\_new}, \texttt{tt\_old} &
+Actualizaci\'on global \texttt{tt\_old}$\leftarrow$\texttt{tt\_new} para la
+siguiente iteraci\'on ADI. Con \texttt{collapse(2)} cada par $(i,j)$ lo procesa
+un solo hilo; las escrituras no se solapan aunque el arreglo sea \texttt{shared}. \\
+\texttt{private} & \texttt{ii}, \texttt{jj} &
+Definen la iteraci\'on fusionada de tama\~no $n_x \times n_y$. Si fueran \texttt{shared},
+los hilos corromper\'ian el contador del bucle del otro. Con \texttt{collapse(2)}
+ambos deben ser privados para repartir nodos sin carrera en los \'indices. \\
+\hline
+\end{tabular}
+\end{center}
+
+\paragraph{Salida a disco y comparaci\'on con el secuencial.}
+El ejecutable OpenMP \textbf{no} escribe la malla en las mediciones de tiempo
+(\texttt{benchmark\_aceleracion.py}). Solo si la variable de entorno
+\texttt{CALOR2D\_DUMP\_MESH} est\'a definida (la fija
+\texttt{compare\_with\_secuencial.py}) se genera
+\texttt{resultados/tablas/resultado\_malla.dat} y \texttt{checksum=}.
+El script compila y ejecuta ambos c\'odigos, reporta $\max|T_{\mathrm{OMP}}-T_{\mathrm{seq}}|$ y genera
+\texttt{comparacion\_campo\_secuencial\_omp.png} (secuencial, OpenMP y diferencia)
+y un perfil en $y=\mathrm{const}$.
+El \emph{benchmark} de aceleraci\'on (\texttt{OMP/calor2D/scripts/benchmark\_aceleracion.py})
+sigue midiendo solamente tiempo de pared.
+
+\begin{verbatim}
+  block
+     character(len=128) :: dump_env
+     double precision :: checksum
+     integer :: dump_len
+
+     call get_environment_variable('CALOR2D_DUMP_MESH', dump_env, length=dump_len)
+     if (dump_len > 0) then
+        checksum = 0.d0
+        !$omp parallel do default(none) &
+        !$omp shared(tt_new) private(ii, jj) reduction(+:checksum) collapse(2) schedule(static)
+        do ii = 1, nx
+           do jj = 1, ny
+              checksum = checksum + tt_new(ii, jj)
+           end do
+        end do
+        !$omp end parallel do
+        write(*, '(A,ES24.16)') 'checksum=', checksum
+
+        open(unit=101, file='resultados/tablas/resultado_malla.dat', status='replace', action='write')
+        do jj = 1, ny
+           do ii = 1, nx
+              write(101, *) (ii - 1) * deltax, (jj - 1) * deltay, tt_new(ii, jj)
+           end do
+        end do
+        close(101)
+     end if
+  end block
+\end{verbatim}
+
+
+\paragraph{M\'odulo \texttt{calor2D\_utils}}
+
+\medskip
 
 El m\'odulo replica la API del secuencial (\texttt{tridiagonal.f90}) m\'as el
 residuo paralelo:
@@ -2123,14 +2368,14 @@ contains
 end module calor2D_utils
 \end{verbatim}
 
-\subsubsection{Subrutinas \texttt{tri\_factor} y \texttt{tri\_solve}}
+\paragraph{Subrutinas \texttt{tri\_factor} y \texttt{tri\_solve}}
+\medskip
 
 Son las mismas que en el caso 1D y el secuencial 2D (ver
-Subsecci\'on~1D): \texttt{tri\_factor} se ejecuta \textbf{dos veces} al inicio
-del programa principal; \texttt{tri\_solve} se llama una vez por fila o columna
-interior dentro de cada \texttt{parallel do}, con \texttt{r} privado por hilo.
+Subsecci\'on~1D): \texttt{tri\_factor} se ejecuta \textbf{dos veces} al inicio del programa principal; \texttt{tri\_solve} se llama una vez por fila o columna interior dentro de cada \texttt{parallel do}, con \texttt{r} privado por hilo.
 
-\subsubsection{Subrutina \texttt{calc\_residuo2}}
+\paragraph{Subrutina \texttt{calc\_residuo2}}
+\medskip
 
 Se invoca desde el programa principal (fuera de un \texttt{parallel do}), pero
 abre su \textbf{propia} regi\'on paralela. Calcula el mismo criterio que el
@@ -2149,21 +2394,42 @@ secuencial con \texttt{reduction(+:res)}:
     !$omp shared(nx,ny,tt_new,tt_old) reduction(+:res) schedule(static)
     do jj = 1, ny
        do ii = 1, nx
-          res = res + (tt_new(ii,jj)-tt_old(ii,jj)) &
-               * (tt_new(ii,jj)-tt_old(ii,jj))
+          res = res + (tt_new(ii,jj)-tt_old(ii,jj)) * (tt_new(ii,jj)-tt_old(ii,jj))
        end do
     end do
     !$omp end parallel do
   end subroutine calc_residuo2
 \end{verbatim}
 
+\noindent\textbf{Variables (regi\'on 5, dentro de \texttt{calc\_residuo2}).}
+\begin{center}
+\footnotesize
+\begin{tabular}{@{}llM{7.6cm}@{}}
+\hline
+Cl\'ausula & Variable & Motivo \\
+\hline
+\texttt{shared} & \texttt{tt\_new}, \texttt{tt\_old} &
+El residuo compara ambos campos en \textbf{cada} nodo $(i,j)$. Todos los hilos
+leen los mismos arreglos (solo lectura aqu\'i); cada uno aporta sumandos distintos
+a la norma sin escribir en la malla. \\
+\texttt{shared} & \texttt{nx}, \texttt{ny} &
+L\'imites del recorrido; escalares fijos para todos los hilos. No cambian dentro
+de la regi\'on y deben ser visibles con \texttt{default(none)}. \\
+\texttt{private} & \texttt{ii}, \texttt{jj} &
+Recorren la malla en el bucle anidado. Cada iteraci\'on del \texttt{parallel do}
+debe tener su par $(i,j)$; si fueran \texttt{shared}, los hilos mezclar\'ian los
+contadores y omitir\'ian o repetir\'an nodos. \\
+\texttt{reduction(+:res)} & \texttt{res} &
+Cada hilo acumula parcialmente $\sum (T^{\mathrm{new}}-T^{\mathrm{old}})^2$.
+La cl\'ausula \texttt{reduction(+:...)} combina esas sumas en un \'unico
+\texttt{res} global de forma determinista al salir de la regi\'on. \\
+\hline
+\end{tabular}
+\end{center}
+
+\paragraph{Mediciones de rendimiento (\texttt{OMP/calor2D/scripts/})}
+
 \medskip
-
-El residuo de \emph{Laplace} (laplaciano discreto en cada nodo) no forma parte
-de este ejecutable; el criterio de monitoreo es \texttt{calc\_residuo2}
-(cambio entre iteraciones del ADI), igual que en el secuencial.
-
-\subsection{Mediciones de rendimiento (\texttt{OMP/scripts/})}
 
 \texttt{benchmark\_aceleracion.py} compila con \texttt{-fopenmp}, barre
 \texttt{OMP\_NUM\_THREADS} desde \texttt{--min-threads} hasta \texttt{--max-threads},
@@ -2173,10 +2439,13 @@ repite \texttt{--runs} ejecuciones por punto, promedia tiempos de pared y escrib
 para todos los valores de hilos en una misma malla. \texttt{plot\_comparacion\_speedup.py}
 lee esas tablas para graficar curva ideal $S_p=p$ frente a la medida.
 
-\subsection{Cuadro resumen: secuencial frente a OpenMP}
+\paragraph{Cuadro resumen: secuencial frente a OpenMP}
+
+\medskip
 
 \begin{center}
-\begin{tabular}{lll}
+\small
+\begin{tabular}{lM{5.1cm}M{5.4cm}}
 \hline
 Aspecto & Secuencial & OpenMP (\texttt{calor2D\_parallel}) \\
 \hline
@@ -2184,9 +2453,14 @@ Campo de temperatura & \texttt{tt(:,:,1:2)} & \texttt{tt\_old}, \texttt{tt\_mid}
 Thomas & \texttt{tri\_factor} + \texttt{tri\_solve} & Igual (factor compartido) \\
 Coef.\ $a,b,c$ en $x,y$ & Precalculados & Precalculados; solo $r$ por l\'inea \\
 Scheduling & --- & \texttt{schedule(static)} en regiones \\
-Paralelismo & Ninguno & 6 regiones + residuo \\
-Parada & \texttt{residuo < tolerancia2} ($10^{-3}$, malla completa) & \texttt{residuo < tolerancia} ($10^{-4}$, $\sqrt{\cdot}$, interior; \texttt{exit} activo) \\
-Salida malla & \texttt{resultado\_malla.dat} & No implementada \\
+Paralelismo & Ninguno & 6 regiones en el bucle + \texttt{calc\_residuo2} \\
+Parada &
+  \texttt{residuo < tolerancia2} ($10^{-3}$ v\'ia \texttt{tolerancia}$^2$); \newline
+  suma de cuadrados, malla completa &
+  Igual (\texttt{tolerancia=1.d-3}); \newline
+  \texttt{calc\_residuo2}, malla completa \\
+Salida malla & \texttt{resultado\_malla.dat} &
+  S\'i; comparaci\'on v\'ia \newline \texttt{compare\_with\_secuencial.py} \\
 \hline
 \end{tabular}
 \end{center}
@@ -2203,7 +2477,7 @@ donde se fija la temperatura a cero.
   \centering
   \captionsetup{justification=centering}
   \includegraphics[width=0.8\textwidth]{calor2D_plate_blue_red.png}
-  \caption{Distribuci\'on de temperatura en el caso 2D paralelo con OpenMP (misma malla hasta generar figura en \texttt{OMP/figures/})}
+  \caption{Distribuci\'on de temperatura en el caso 2D paralelo con OpenMP (misma malla hasta generar figura en \texttt{OMP/calor2D/figures/})}
   \label{fig:temp_2d_omp}
 \end{figure}
 
@@ -2226,6 +2500,8 @@ referencia se \textbf{descoment\'o} \texttt{if (residuo < tolerancia) exit}
 cuadrados en el interior), distinta del criterio del desarrollo
 (\texttt{tolerancia2}, suma en toda la malla). La versi\'on desarrollada usa
 \texttt{tolerancia = 1d-3} y $\approx 15103$ iteraciones en las mediciones.
+
+\medskip
 
 La versi\'on paralela distribuye los barridos independientes entre hilos de
 OpenMP. Si $t_p$ es el tiempo de ejecuci\'on usando $p$ hilos y $t_1$ es el
@@ -2250,13 +2526,13 @@ S_p^{ideal}=p,
 E_p^{ideal}=1.
 \end{equation}
 
-Las mediciones se obtuvieron con \texttt{OMP/scripts/benchmark\_aceleracion.py}:
+Las mediciones se obtuvieron con \texttt{OMP/calor2D/scripts/benchmark\_aceleracion.py}:
 $10$ corridas por punto, $3$ warmups, mediana de tiempos de pared,
 calibraci\'on dedicada de $t_1$ con $10$ corridas adicionales a $1$ hilo
 (\texttt{--baseline-runs 10 --stat median}), y
 \texttt{OMP\_PROC\_BIND=true}, \texttt{OMP\_PLACES=cores}.
 El speedup es $S_p=t_1/t_p$ con el mismo $t_1$ para todos los $p$.
-Las muestras crudas quedan en \texttt{OMP/tables/*\_samples.txt}.
+Las muestras crudas quedan en \texttt{OMP/calor2D/tables/*\_samples.txt}.
 La gr\'afica comparativa usa \texttt{plot\_comparacion\_speedup.py}
 (Tabla~\ref{tab:omp-speedup-h6}, Figuras~\ref{fig:comparacion-speedup-h6}--\ref{fig:comparacion-tiempos-h6}).
 
@@ -2301,6 +2577,8 @@ En todas las curvas $S_p\le p$. Tras activar el \texttt{exit} en la referencia,
 ambos c\'odigos paran por residuo ($\approx 15103$ iter en desarrollo,
 $\approx 14320$--$14500$ en referencia, con ligera variaci\'on entre hilos por
 el orden paralelo).
+
+\bigskip
 
 \bigskip
 
@@ -2449,6 +2727,22 @@ planos y las fronteras viven en dispositivo durante todas las iteraciones:
   !$acc      copyin(cfx, cfy, inv_dx2, inv_dy2)
 \end{verbatim}
 
+\noindent\textbf{Datos (regi\'on \texttt{data}).}
+\begin{center}
+\small
+\begin{tabular}{lll}
+\hline
+Cl\'ausula & Variable & Motivo \\
+\hline
+\texttt{copy} & \texttt{tt}, \texttt{aa}--\texttt{rr} &
+Se actualizan en cada iteraci\'on en dispositivo; al cerrar la regi\'on, el host
+recibe el estado final (\texttt{tt} para \texttt{checksum}). \\
+\texttt{copyin} & \texttt{cfx}, \texttt{cfy}, \texttt{inv\_dx2}, \texttt{inv\_dy2} &
+Constantes o fronteras fijadas en host antes del bucle; solo lectura en kernels. \\
+\hline
+\end{tabular}
+\end{center}
+
 \paragraph{Directivas OpenACC y mapa de regiones}
 
 \medskip
@@ -2459,6 +2753,24 @@ entre los \emph{workers} de \texttt{ACC\_NUM\_CORES}. El ensamblado en
 en \texttt{loop seq} dentro de cada gang. \texttt{private(tx)} o
 \texttt{private(ty)} evita que dos gangs compartan el vector 1D de soluci\'on
 intermedia.
+
+\medskip
+
+En OpenACC no se usan las cl\'ausulas \texttt{shared}/\texttt{private} de OpenMP;
+el equivalente es \texttt{present} (dato ya en la regi\'on \texttt{data}) y
+\texttt{private} (copia local por \texttt{gang}). Criterio an\'alogo:
+\begin{itemize}
+  \item \texttt{present(...)}: arreglos residentes en \texttt{!\$acc data} que
+        el kernel lee o escribe (\texttt{tt}, \texttt{aa}--\texttt{rr},
+        \texttt{cfx}, \texttt{cfy}, escalares \texttt{inv\_dx2}/\texttt{inv\_dy2}).
+  \item \texttt{private(tx)} / \texttt{private(ty)}: igual que \texttt{rx}/\texttt{tx}
+        en OpenMP --- cada fila/columna resuelve su tridiagonal en local.
+  \item \texttt{reduction(+:...)}: \texttt{residuo} y \texttt{checksum} se combinan
+        entre unidades de ejecuci\'on al salir del bucle.
+  \item \texttt{copy}/\texttt{copyin} en \texttt{data}: \texttt{tt} y los vectores
+        planos se mueven o mantienen en dispositivo; \texttt{cfx}/\texttt{cfy} e
+        \texttt{inv\_*} entran solo al inicio (\texttt{copyin}).
+\end{itemize}
 
 \medskip
 
@@ -2515,6 +2827,10 @@ Antes de cada barrido se guarda la iteraci\'on previa en el tercer \'indice de
      !$acc end parallel loop
 \end{verbatim}
 
+\noindent\textbf{Datos (regi\'on ACC 1).} \texttt{present(tt)}: toda la malla en
+dispositivo; cada $(i,j)$ se copia entre planos sin que un \texttt{gang} pise el
+nodo de otro (\texttt{collapse(2)}).
+
 \paragraph{Regiones 2--3: barrido en $y$.}
 Para cada fila $j$ interior, en \texttt{loop seq} se escriben coeficientes en
 \texttt{aa(indicex(ii,jj))}, \ldots seg\'un \ref{eq:coef_tridiagonal_x_2D_r}:
@@ -2550,6 +2866,25 @@ Luego cada gang llama a \texttt{tri} sobre el tramo
      !$acc end parallel loop
 \end{verbatim}
 
+\noindent\textbf{Datos (regiones ACC 2--3).}
+\begin{center}
+\small
+\begin{tabular}{lll}
+\hline
+Cl\'ausula & Variable & Motivo \\
+\hline
+\texttt{present} & \texttt{tt}, \texttt{aa}--\texttt{rr}, \texttt{cfx},
+\texttt{inv\_dx2}, \texttt{inv\_dy2} &
+Ensamblado: cada \texttt{gang} $j$ escribe su tramo en los vectores 1D con
+\texttt{indicex}. \\
+\texttt{present} & \texttt{aa}--\texttt{rr}, \texttt{tt} (resoluci\'on) &
+Cada \texttt{gang} lee el tramo que ensambl\'o y escribe \texttt{tt(:,j,1)}. \\
+\texttt{private(tx)} & \texttt{tx} &
+Vector soluci\'on temporal de la fila; no compartido entre gangs. \\
+\hline
+\end{tabular}
+\end{center}
+
 \subsection{Barrido en $x$}
 
 \paragraph{Regiones 4--5: ensamblado y resoluci\'on en $x$.}
@@ -2558,6 +2893,11 @@ Se reutilizan los mismos vectores \texttt{aa}--\texttt{rr}, pero con
 \texttt{bb=-1}, \texttt{cc=1}; en el superior, Dirichlet (\texttt{bb=1},
 \texttt{rr=cfy(i,2)}). Tras \texttt{tri} sobre
 \texttt{indicey(ii,1):indicey(ii,ny)}, se copia \texttt{ty} a \texttt{tt(ii,:,1)}.
+
+\noindent\textbf{Datos (regiones ACC 4--5).} Misma l\'ogica que en $y$ con
+\texttt{indicey}: \texttt{present(tt,aa,bb,cc,rr,cfy,inv\_*)} en ensamblado;
+\texttt{present(aa,bb,cc,rr,tt)} + \texttt{private(ty)} en resoluci\'on (cada
+columna $i$ su \texttt{ty}).
 
 \subsection{Residuo, actualizaci\'on y salida}
 \label{subsec:acc-residuo-salida}
@@ -2578,6 +2918,10 @@ Mismo criterio que OpenMP (suma de cuadrados entre planos 1 y 2, sin ra\'iz):
   end do
 \end{verbatim}
 
+\noindent\textbf{Datos (regi\'on ACC 6, residuo).}
+\texttt{present(tt)}: lectura de ambos planos;
+\texttt{reduction(+:residuo)}: acumulaci\'on segura en dispositivo/host.
+
 \paragraph{Salida y \texttt{checksum}.}
 Tras \texttt{!\$acc end data} se imprimen iteraciones, residuo y suma del campo
 para el \emph{benchmark}:
@@ -2592,6 +2936,9 @@ para el \emph{benchmark}:
   write(*, '(A,I0)') 'iteraciones=', iter
   write(*, '(A,ES24.16)') 'checksum=', checksum
 \end{verbatim}
+
+\noindent\textbf{Datos (checksum).} \texttt{present(tt)} + \texttt{reduction(+:checksum)}:
+suma global del campo para validaci\'on num\'erica en el \emph{benchmark}.
 
 A diferencia del secuencial, no se vuelca la malla a disco; el script de medici\'on
 parsea \texttt{iteraciones=} y \texttt{checksum=}.
