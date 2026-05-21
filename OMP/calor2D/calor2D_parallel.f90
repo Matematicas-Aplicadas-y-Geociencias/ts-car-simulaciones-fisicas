@@ -191,4 +191,32 @@ program Calor2D
 
   write(*,*) 'Convergencia en ', iter, ' iteraciones'
 
+  block
+     character(len=128) :: dump_env
+     double precision :: checksum
+     integer :: dump_len
+
+     call get_environment_variable('CALOR2D_DUMP_MESH', dump_env, length=dump_len)
+     if (dump_len > 0) then
+        checksum = 0.d0
+        !$omp parallel do default(none) &
+        !$omp shared(tt_new) private(ii, jj) reduction(+:checksum) collapse(2) schedule(static)
+        do ii = 1, nx
+           do jj = 1, ny
+              checksum = checksum + tt_new(ii, jj)
+           end do
+        end do
+        !$omp end parallel do
+        write(*, '(A,ES24.16)') 'checksum=', checksum
+
+        open(unit=101, file='resultados/tablas/resultado_malla.dat', status='replace', action='write')
+        do jj = 1, ny
+           do ii = 1, nx
+              write(101, *) (ii - 1) * deltax, (jj - 1) * deltay, tt_new(ii, jj)
+           end do
+        end do
+        close(101)
+     end if
+  end block
+
 end program Calor2D
