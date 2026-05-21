@@ -1,15 +1,15 @@
 #ifndef NX
-#define NX 480
+#define NX 300
 #endif
 #ifndef NY
-#define NY 240
+#define NY 150
 #endif
 #ifndef ITERMAX
-#define ITERMAX 10000
+#define ITERMAX 20000
 #endif
 
 program Calor2D_ACC
-  use calor2D_acc_utils, only : tri
+  use calor2D_acc_utils, only : indicex, indicey, tri
   implicit none
 
   integer, parameter :: nx = NX, ny = NY, itermax = ITERMAX
@@ -17,157 +17,168 @@ program Calor2D_ACC
 
   double precision :: lx, ly, deltax, deltay
   double precision :: inv_dx2, inv_dy2
-  double precision :: residuo, checksum
+  double precision :: residuo, tolerancia, tolerancia2, checksum
 
-  double precision, allocatable :: tt_old(:,:), tt_mid(:,:), tt_new(:,:)
-  double precision, allocatable :: cfx(:,:), cfy(:,:)
+  double precision :: tt(nx, ny, 2)
+  double precision :: cfx(ny, 2), cfy(nx, 2)
+  double precision :: tx(nx), ty(ny)
 
-  double precision :: ax(nx), bx(nx), cx(nx), rx(nx), tx(nx)
-  double precision :: ay(ny), by(ny), cy(ny), ry(ny), ty(ny)
+  ! Coeficientes y segundo miembro planos (todas las tridiagonales de un barrido)
+  double precision :: aa(nx * ny), bb(nx * ny), cc(nx * ny), rr(nx * ny)
 
-  allocate(tt_old(nx,ny), tt_mid(nx,ny), tt_new(nx,ny))
-  allocate(cfx(ny,2), cfy(nx,2))
+  tolerancia = 1.d-3
+  tolerancia2 = tolerancia * tolerancia
 
   lx = 10.d0
   ly = 5.d0
-  deltax = lx/nx
-  deltay = ly/ny
-  inv_dx2 = 1.d0/(deltax*deltax)
-  inv_dy2 = 1.d0/(deltay*deltay)
+  deltax = lx / (nx - 1)
+  deltay = ly / (ny - 1)
+  inv_dx2 = 1.d0 / (deltax * deltax)
+  inv_dy2 = 1.d0 / (deltay * deltay)
 
-  tt_old(:,:) = 0.d0
-  tt_mid(:,:) = 0.d0
-  tt_new(:,:) = 0.d0
+  tt = 0.d0
+  aa = 0.d0
+  bb = 0.d0
+  cc = 0.d0
+  rr = 0.d0
 
   do jj = 1, ny
-     cfx(jj,1) = 1.d0
-     cfx(jj,2) = 0.d0
+     cfx(jj, 1) = 1.d0
+     cfx(jj, 2) = 0.d0
   end do
 
   do ii = 1, nx
-     cfy(ii,1) = 1.d0
-     cfy(ii,2) = 0.d0
+     cfy(ii, 1) = 0.d0
+     cfy(ii, 2) = 1.d0
   end do
 
-  !$acc data copyin(cfx, cfy) copy(tt_old, tt_mid, tt_new)
+  !$acc data copy(tt, aa, bb, cc, rr) copyin(cfx, cfy, inv_dx2, inv_dy2)
   do iter = 1, itermax
 
-     !$acc parallel loop present(tt_old, tt_mid)
-     do ii = 1, nx
-        tt_mid(ii,1) = tt_old(ii,1)
-        tt_mid(ii,ny) = tt_old(ii,ny)
+     !$acc parallel loop collapse(2) present(tt)
+     do jj = 1, ny
+        do ii = 1, nx
+           tt(ii, jj, 2) = tt(ii, jj, 1)
+        end do
      end do
      !$acc end parallel loop
 
-     !$acc parallel loop gang present(tt_old, tt_mid, cfx) &
-     !$acc private(ax, bx, cx, rx, tx)
-     do jj = 2, ny-1
+     ! Barrido en y: ensamblar ny sistemas tridiagonales en aa,bb,cc,rr (indicex)
+     !$acc parallel loop gang present(tt, aa, bb, cc, rr, cfx, inv_dx2, inv_dy2)
+     do jj = 2, ny - 1
         !$acc loop seq
-        do ii = 2, nx-1
-           ax(ii) = inv_dx2
-           bx(ii) = -2.d0*(inv_dx2 + inv_dy2)
-           cx(ii) = inv_dx2
-           rx(ii) = -inv_dy2*tt_old(ii,jj-1) - inv_dy2*tt_old(ii,jj+1)
+        do ii = 2, nx - 1
+           aa(indicex(ii, jj)) = inv_dx2
+           bb(indicex(ii, jj)) = -2.d0 * (inv_dx2 + inv_dy2)
+           cc(indicex(ii, jj)) = inv_dx2
+           rr(indicex(ii, jj)) = -inv_dy2 * tt(ii, jj - 1, 1) - inv_dy2 * tt(ii, jj + 1, 1)
         end do
+        aa(indicex(1, jj)) = 0.d0
+        bb(indicex(1, jj)) = 1.d0
+        cc(indicex(1, jj)) = 0.d0
+        rr(indicex(1, jj)) = cfx(jj, 1)
+        aa(indicex(nx, jj)) = 0.d0
+        bb(indicex(nx, jj)) = 1.d0
+        cc(indicex(nx, jj)) = 0.d0
+        rr(indicex(nx, jj)) = cfx(jj, 2)
+     end do
+     !$acc end parallel loop
 
-        ax(1) = 0.d0
-        bx(1) = 1.d0
-        cx(1) = 0.d0
-        rx(1) = cfx(jj,1)
-
-        ax(nx) = 0.d0
-        bx(nx) = 1.d0
-        cx(nx) = 0.d0
-        rx(nx) = cfx(jj,2)
-
-        call tri(ax, bx, cx, rx, tx, nx)
-
+     ! Resolver filas (tri destruye bb,rr del tramo; cada jj usa su slice)
+     !$acc parallel loop gang present(aa, bb, cc, rr, tt) private(tx)
+     do jj = 2, ny - 1
+        call tri( &
+             aa(indicex(1, jj):indicex(nx, jj)), &
+             bb(indicex(1, jj):indicex(nx, jj)), &
+             cc(indicex(1, jj):indicex(nx, jj)), &
+             rr(indicex(1, jj):indicex(nx, jj)), &
+             tx, nx)
         !$acc loop seq
         do ii = 1, nx
-           tt_mid(ii,jj) = tx(ii)
+           tt(ii, jj, 1) = tx(ii)
         end do
      end do
      !$acc end parallel loop
 
-     !$acc parallel loop present(tt_mid, tt_new)
-     do jj = 1, ny
-        tt_new(1,jj) = tt_mid(1,jj)
-        tt_new(nx,jj) = tt_mid(nx,jj)
-     end do
-     !$acc end parallel loop
-
-     !$acc parallel loop gang present(tt_mid, tt_new, cfy) &
-     !$acc private(ay, by, cy, ry, ty)
-     do ii = 2, nx-1
+     ! Barrido en x: ensamblar con indicey
+     !$acc parallel loop gang present(tt, aa, bb, cc, rr, cfy, inv_dx2, inv_dy2)
+     do ii = 2, nx - 1
         !$acc loop seq
-        do jj = 2, ny-1
-           ay(jj) = inv_dy2
-           by(jj) = -2.d0*(inv_dx2 + inv_dy2)
-           cy(jj) = inv_dy2
-           ry(jj) = -inv_dx2*tt_mid(ii-1,jj) - inv_dx2*tt_mid(ii+1,jj)
+        do jj = 2, ny - 1
+           aa(indicey(ii, jj)) = inv_dy2
+           bb(indicey(ii, jj)) = -2.d0 * (inv_dx2 + inv_dy2)
+           cc(indicey(ii, jj)) = inv_dy2
+           rr(indicey(ii, jj)) = -inv_dx2 * tt(ii - 1, jj, 1) - inv_dx2 * tt(ii + 1, jj, 1)
         end do
+        aa(indicey(ii, 1)) = 0.d0
+        bb(indicey(ii, 1)) = -1.d0
+        cc(indicey(ii, 1)) = 1.d0
+        rr(indicey(ii, 1)) = cfy(ii, 1)
+        aa(indicey(ii, ny)) = 0.d0
+        bb(indicey(ii, ny)) = 1.d0
+        cc(indicey(ii, ny)) = 0.d0
+        rr(indicey(ii, ny)) = cfy(ii, 2)
+     end do
+     !$acc end parallel loop
 
-        ay(1) = 0.d0
-        by(1) = 1.d0
-        cy(1) = 0.d0
-        ry(1) = cfy(ii,1)
-
-        ay(ny) = -1.d0
-        by(ny) = 1.d0
-        cy(ny) = 0.d0
-        ry(ny) = cfy(ii,2)
-
-        call tri(ay, by, cy, ry, ty, ny)
-
+     !$acc parallel loop gang present(aa, bb, cc, rr, tt) private(ty)
+     do ii = 2, nx - 1
+        call tri( &
+             aa(indicey(ii, 1):indicey(ii, ny)), &
+             bb(indicey(ii, 1):indicey(ii, ny)), &
+             cc(indicey(ii, 1):indicey(ii, ny)), &
+             rr(indicey(ii, 1):indicey(ii, ny)), &
+             ty, ny)
         !$acc loop seq
         do jj = 1, ny
-           tt_new(ii,jj) = ty(jj)
+           tt(ii, jj, 1) = ty(jj)
         end do
      end do
      !$acc end parallel loop
 
      residuo = 0.d0
-     !$acc parallel loop collapse(2) reduction(+:residuo) present(tt_new, tt_old)
+     !$acc parallel loop collapse(2) reduction(+:residuo) present(tt)
      do jj = 1, ny
         do ii = 1, nx
-           residuo = residuo + (tt_new(ii,jj) - tt_old(ii,jj)) &
-                              *(tt_new(ii,jj) - tt_old(ii,jj))
+           residuo = residuo + (tt(ii, jj, 1) - tt(ii, jj, 2)) &
+                * (tt(ii, jj, 1) - tt(ii, jj, 2))
         end do
      end do
      !$acc end parallel loop
-     residuo = sqrt(residuo)
 
-     !$acc parallel loop collapse(2) present(tt_new, tt_old)
-     do jj = 1, ny
-        do ii = 1, nx
-           tt_old(ii,jj) = tt_new(ii,jj)
-        end do
-     end do
-     !$acc end parallel loop
+     if (residuo < tolerancia2) exit
+
   end do
 
   checksum = 0.d0
-  !$acc parallel loop collapse(2) reduction(+:checksum) present(tt_new)
+  !$acc parallel loop collapse(2) reduction(+:checksum) present(tt)
   do jj = 1, ny
      do ii = 1, nx
-        checksum = checksum + tt_new(ii,jj)
+        checksum = checksum + tt(ii, jj, 1)
      end do
   end do
   !$acc end parallel loop
   !$acc end data
 
-  write(*,'(A,I0,A,I0,A,I0)') 'nx=', nx, ' ny=', ny, ' itermax=', itermax
-  write(*,'(A,I0)') 'iteraciones=', itermax
-  write(*,'(A,ES24.16)') 'residuo=', residuo
-  write(*,'(A,ES24.16)') 'checksum=', checksum
+  write(*, '(A,I0,A,I0,A,I0)') 'nx=', nx, ' ny=', ny, ' itermax=', itermax
+  write(*, '(A,I0)') 'iteraciones=', iter
+  write(*, '(A,ES24.16)') 'residuo=', residuo
+  write(*, '(A,ES24.16)') 'checksum=', checksum
 
-  do jj = 1, ny
-     do ii = 1, nx
-        write(*,'(3(ES24.16,1X))') (ii-1)*deltax, (jj-1)*deltay, tt_new(ii,jj)
-     end do
-     write(*,*) ' '
-  end do
+  block
+     character(len=128) :: dump_env
+     integer :: dump_len
 
-  deallocate(tt_old, tt_mid, tt_new)
-  deallocate(cfx, cfy)
+     call get_environment_variable('CALOR2D_DUMP_MESH', dump_env, length=dump_len)
+     if (dump_len > 0) then
+        open(unit=101, file='resultados/tablas/resultado_malla.dat', status='replace', action='write')
+        do jj = 1, ny
+           do ii = 1, nx
+              write(101, *) (ii - 1) * deltax, (jj - 1) * deltay, tt(ii, jj, 1)
+           end do
+        end do
+        close(101)
+     end if
+  end block
+
 end program Calor2D_ACC
