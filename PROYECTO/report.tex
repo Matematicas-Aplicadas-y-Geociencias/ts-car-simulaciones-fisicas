@@ -837,7 +837,7 @@ soluci\'on. Se observa que la temperatura disminuye linealmente desde el
 extremo izquierdo, donde se impone un flujo de calor, hasta el extremo derecho, 
 donde se fija la temperatura a cero.
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.8\textwidth]{temperatura_1d.png}
 \caption{Distribución de temperatura en el caso 1D}
@@ -932,7 +932,7 @@ extremos izquierdo y derecho con temperaturas $T_0=0^{o}C$ y $T_{L_x}=10^{o}C$,
 mientras que en los extremos superior e inferior se imponen condiciones de 
 Neumann con flujo de calor $q_0/k= 0$ K/m.
 
-\begin{figure}[h]
+\begin{figure}[ht]
 \centering
 \captionsetup{justification=centering}
 \makebox[\textwidth][c]{%
@@ -1685,7 +1685,7 @@ se imponen seg\'un las condiciones de frontera almacenadas en \texttt{cfx}.
   extremo izquierdo, donde se impone un flujo de calor, hasta el extremo derecho, 
   donde se fija la temperatura a cero.
 
-  \begin{figure}[h]
+  \begin{figure}[ht]
   \centering
   \captionsetup{justification=centering}
   \includegraphics[width=0.8\textwidth]{calor2D_plate_blue_red.png}
@@ -2473,7 +2473,7 @@ soluci\'on. Se observa que la temperatura disminuye linealmente desde el
 extremo izquierdo, donde se impone un flujo de calor, hasta el extremo derecho, 
 donde se fija la temperatura a cero.
 
-\begin{figure}[h]
+\begin{figure}[ht]
   \centering
   \captionsetup{justification=centering}
   \includegraphics[width=0.8\textwidth]{calor2D_plate_blue_red.png}
@@ -2528,49 +2528,53 @@ E_p^{ideal}=1.
 
 Las mediciones se obtuvieron con \texttt{OMP/calor2D/scripts/benchmark\_aceleracion.py}:
 $10$ corridas por punto, $3$ warmups, mediana de tiempos de pared,
-calibraci\'on dedicada de $t_1$ con $10$ corridas adicionales a $1$ hilo
-(\texttt{--baseline-runs 10 --stat median}), y
+calibraci\'on de $t_1$ con $10$ corridas a $1$ hilo
+(\texttt{--baseline-runs 10 --stat median}), hilos de $1$ a $7$, y
 \texttt{OMP\_PROC\_BIND=true}, \texttt{OMP\_PLACES=cores}.
+Los puntos $p=1,\ldots,6$ coinciden con la campa\~na estable
+(\texttt{aceleracion\_calor2D\_omp\_h6}); $p=7$ se a\~nadi\'o con la misma metodolog\'ia.
 El speedup es $S_p=t_1/t_p$ con el mismo $t_1$ para todos los $p$.
-Las muestras crudas quedan en \texttt{OMP/calor2D/tables/*\_samples.txt}.
-La gr\'afica comparativa usa \texttt{plot\_comparacion\_speedup.py}
-(Tabla~\ref{tab:omp-speedup-h6}, Figuras~\ref{fig:comparacion-speedup-h6}--\ref{fig:comparacion-tiempos-h6}).
+Las tablas quedan en \texttt{OMP/calor2D/tables/aceleracion\_omp\_*\_h7.dat};
+las gr\'aficas comparativas en
+\texttt{OMP/calor2D/figures/comparacion\_*\_omp\_dev\_ref\_h7.png}
+(Tabla~\ref{tab:omp-speedup-h7}, Figuras~\ref{fig:comparacion-speedup-h7}--\ref{fig:comparacion-tiempos-h7}).
 
-\begin{table}[h]
+\begin{table}[ht]
   \centering
-  \caption{Benchmark OpenMP, malla $300\times 150$, hasta $6$ hilos (tiempo mediano [s] y $S_p$).}
-  \label{tab:omp-speedup-h6}
+  \caption{Benchmark OpenMP, malla $300\times 150$, $1$--$7$ hilos (tiempo mediano [s] y $S_p$).}
+  \label{tab:omp-speedup-h7}
   \begin{tabular}{r r r r r}
     \hline
     $p$ & $t_p$ (desarrollo) & $S_p$ & $t_p$ (referencia) & $S_p$ \\
     \hline
-    1 & 15.13 & 1.00 & 17.27 & 1.00 \\
-    2 &  8.25 & 1.83 & 10.11 & 1.71 \\
-    3 &  5.81 & 2.60 &  7.19 & 2.40 \\
-    4 &  4.55 & 3.33 &  6.49 & 2.66 \\
-    5 &  3.90 & 3.88 &  5.18 & 3.34 \\
-    6 &  3.63 & 4.17 &  5.21 & 3.32 \\
+    1 & 14.59 & 1.00 & 24.24 & 1.00 \\
+    2 &  7.32 & 1.99 & 13.16 & 1.84 \\
+    3 &  5.70 & 2.56 &  9.56 & 2.54 \\
+    4 &  4.62 & 3.16 &  8.04 & 3.02 \\
+    5 &  3.91 & 3.73 &  7.31 & 3.31 \\
+    6 &  3.83 & 3.81 &  6.32 & 3.83 \\
+    7 &  3.41 & 4.28 &  5.84 & 4.15 \\
     \hline
   \end{tabular}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[ht]
   \centering
   \captionsetup{justification=centering}
-  \includegraphics[width=0.65\textwidth]{comparacion_speedup_calor2D_h6.png}
-  \caption{Aceleraci\'on OpenMP: desarrollo (\texttt{OMP/calor2D}) frente a referencia
-  (\texttt{REFERENCIA/paralelo/calor2D.f90}, con \texttt{exit} activo), malla
-  $300\times 150$, hasta $6$ hilos. Curva roja discontinua: speedup ideal $S_p=p$.}
-  \label{fig:comparacion-speedup-h6}
+  \includegraphics[width=0.65\textwidth]{comparacion_omp_dev_ref_h7.png}
+  \caption{Aceleraci\'on OpenMP: desarrollo (\texttt{calor2D\_parallel}) frente a referencia
+  (\texttt{REFERENCIA/paralelo}, malla $300\times 150$), $1$--$7$ hilos.
+  Curva roja discontinua: speedup ideal $S_p=p$.}
+  \label{fig:comparacion-speedup-h7}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[ht]
   \centering
   \captionsetup{justification=centering}
-  \includegraphics[width=0.65\textwidth]{comparacion_tiempos_calor2D_h6.png}
-  \caption{Tiempo de pared medio por n\'umero de hilos (misma malla y condiciones que la
-  Figura~\ref{fig:comparacion-speedup-h6}).}
-  \label{fig:comparacion-tiempos-h6}
+  \includegraphics[width=0.65\textwidth]{comparacion_tiempos_omp_dev_ref_h7.png}
+  \caption{Tiempo de pared (mediana) frente al n\'umero de hilos OpenMP; mismas condiciones que la
+  Figura~\ref{fig:comparacion-speedup-h7}.}
+  \label{fig:comparacion-tiempos-h7}
 \end{figure}
 
 En todas las curvas $S_p\le p$. Tras activar el \texttt{exit} en la referencia,
@@ -2588,32 +2592,32 @@ La versi\'on OpenACC del repositorio se concentra en
 \texttt{ACC/paralelo/calor2D/calor2D\_acc.f90} y
 \texttt{calor2D\_acc\_utils.f90}. La f\'isica (dominio, malla $300\times 150$,
 $\Delta x=L_x/(n_x-1)$, tolerancia $10^{-3}$, fronteras mixtas) coincide con el
-desarrollo OpenMP, pero la \textbf{estructura de datos} es la de arreglos
-\textbf{unidimensionales planos} para almacenar \emph{todos} los sistemas
-tridiagonales de cada barrido en vectores \texttt{aa}, \texttt{bb}, \texttt{cc}
-y \texttt{rr} de tama\~no $n_x n_y$.
+desarrollo OpenMP. La versi\'on inicial reensamblaba los coeficientes
+tridiagonales \texttt{aa}, \texttt{bb}, \texttt{cc} y el lado derecho
+\texttt{rr} en cada paso; la versi\'on final elimina ese costo: como la malla y
+las fronteras son constantes, los coeficientes se construyen y factorizan una
+sola vez.
 
 \medskip
 
-Respecto al caso OpenMP con tres campos y Thomas factorizado, los rasgos del
-c\'odigo OpenACC son:
+Respecto al caso OpenMP, el c\'odigo OpenACC final usa el mismo patr\'on
+algor\'itmico:
 
 \begin{enumerate}
-  \item \textbf{Campo de temperatura en dos planos}
-        \texttt{tt(nx,ny,1)} / \texttt{tt(:,:,2)} (como el secuencial), no
-        \texttt{tt\_old}/\texttt{tt\_mid}/\texttt{tt\_new}.
-  \item \textbf{Coeficientes tridiagonales en 1D}: en cada iteraci\'on se
-        reensamblan \texttt{aa}, \texttt{bb}, \texttt{cc} y \texttt{rr} sobre
-        el mismo bloque \texttt{nx*ny}; el barrido en $y$ usa
-        \texttt{indicex}$(i,j)=i+n_x(j-1)$ y el barrido en $x$ usa
-        \texttt{indicey}$(i,j)=j+n_y(i-1)$.
-  \item \textbf{Resoluci\'on con \texttt{tri}} (eliminaci\'on in situ, sin
-        \texttt{tri\_factor}): \texttt{tri} modifica \texttt{bb} y \texttt{rr}
-        del tramo; por eso hay que volver a ensamblar en cada paso del ADI.
-        La subrutina lleva \texttt{!\$acc routine seq} y se llama desde cada
-        \texttt{gang} (fila o columna).
+  \item \textbf{Tres campos de temperatura}: \texttt{tt\_old}, \texttt{tt\_mid}
+        y \texttt{tt\_new}. Esto evita carreras: el barrido en $y$ lee
+        \texttt{tt\_old} y escribe \texttt{tt\_mid}; el barrido en $x$ lee
+        \texttt{tt\_mid} y escribe \texttt{tt\_new}.
+  \item \textbf{Coeficientes constantes}: \texttt{ax}, \texttt{bx\_base},
+        \texttt{cx}, \texttt{ay}, \texttt{by\_base}, \texttt{cy} se construyen
+        una vez antes del bucle de iteraciones.
+  \item \textbf{Thomas factorizado}: \texttt{tri\_factor} produce
+        \texttt{cpx}, \texttt{denx}, \texttt{cpy}, \texttt{deny} una sola vez;
+        en cada fila/columna, \texttt{tri\_solve} solo modifica el lado derecho
+        local \texttt{rx} o \texttt{ry}.
   \item \textbf{Regi\'on \texttt{!\$acc data}} con \texttt{copy} de
-        \texttt{tt} y de los cuatro vectores planos durante todo el bucle global.
+        \texttt{tt\_old}, \texttt{tt\_mid}, \texttt{tt\_new} y \texttt{copyin}
+        de fronteras, escalares y factores de Thomas durante todo el bucle global.
 \end{enumerate}
 
 \paragraph{Archivos en \texttt{ACC/paralelo/calor2D}}
@@ -2624,7 +2628,7 @@ c\'odigo OpenACC son:
 Archivo & Rol \\
 \hline
 \texttt{calor2D\_acc.f90}       & Programa \texttt{Calor2D\_ACC} \\
-\texttt{calor2D\_acc\_utils.f90} & \texttt{indicex}, \texttt{indicey}, \texttt{tri} (dispositivo) \\
+\texttt{calor2D\_acc\_utils.f90} & \texttt{tri\_factor}, \texttt{tri\_solve} y \texttt{tri} de prueba \\
 \hline
 \end{tabular}
 \end{center}
@@ -2646,13 +2650,13 @@ Los tama\~nos por defecto se fijan con preprocesador
 
 \medskip
 
-Se importan \texttt{indicex}, \texttt{indicey} y \texttt{tri} del m\'odulo de
+Se importan \texttt{tri\_factor} y \texttt{tri\_solve} del m\'odulo de
 utilidades. Los macros \texttt{NX}, \texttt{NY}, \texttt{ITERMAX} (preprocesador)
 fijan la malla en compilaci\'on, igual que en el \emph{benchmark}.
 
 \begin{verbatim}
 program Calor2D_ACC
-  use calor2D_acc_utils, only : indicex, indicey, tri
+  use calor2D_acc_utils, only : tri_factor, tri_solve
   implicit none
 
   integer, parameter :: nx = NX, ny = NY, itermax = ITERMAX
@@ -2662,13 +2666,12 @@ program Calor2D_ACC
   double precision :: inv_dx2, inv_dy2
   double precision :: residuo, tolerancia, tolerancia2, checksum
 
-  double precision :: tt(nx, ny, 2)
+  double precision :: tt_old(nx, ny), tt_mid(nx, ny), tt_new(nx, ny)
   double precision :: cfx(ny, 2), cfy(nx, 2)
-  double precision :: tx(nx), ty(ny)
+  double precision :: rx(nx), tx(nx), ry(ny), ty(ny)
 
-  ! Todas las tridiagonales de un barrido en vectores 1D
-  double precision :: aa(nx * ny), bb(nx * ny)
-  double precision :: cc(nx * ny), rr(nx * ny)
+  double precision :: ax(nx), bx_base(nx), cx(nx), cpx(nx), denx(nx)
+  double precision :: ay(ny), by_base(ny), cy(ny), cpy(ny), deny(ny)
 \end{verbatim}
 
 \texttt{cfx} es \texttt{(ny,2)} y \texttt{cfy} \texttt{(nx,2)}, con el mismo
@@ -2686,18 +2689,28 @@ derecha) y en $y$ (Neumann $q=0$ abajo, Dirichlet $T=1$ arriba).
   inv_dx2 = 1.d0 / (deltax * deltax)
   inv_dy2 = 1.d0 / (deltay * deltay)
 
-  tt = 0.d0
-  aa = 0.d0
-  bb = 0.d0
-  cc = 0.d0
-  rr = 0.d0
+  tt_old = 0.d0
+  tt_mid = 0.d0
+  tt_new = 0.d0
 \end{verbatim}
 
-En cada iteraci\'on y en cada barrido se vuelven a llenar \texttt{aa}, \texttt{bb},
-\texttt{cc} y \texttt{rr} con los coeficientes de las ecuaciones
-\ref{eq:coef_tridiagonal_x_2D_a}--\ref{eq:coef_tridiagonal_y_2D_r}, usando
-\texttt{indicex} o \texttt{indicey} seg\'un la direcci\'on del barrido (no hay
-factorizaci\'on previa porque \texttt{tri} altera \texttt{bb} y \texttt{rr}).
+Los coeficientes constantes se ensamblan una vez y se factorizan antes de entrar
+a la regi\'on OpenACC:
+
+\begin{verbatim}
+  do ii = 2, nx - 1
+     ax(ii) = inv_dx2
+     bx_base(ii) = -2.d0 * (inv_dx2 + inv_dy2)
+     cx(ii) = inv_dx2
+  end do
+  ...
+  call tri_factor(ax, bx_base, cx, cpx, denx, nx)
+  call tri_factor(ay, by_base, cy, cpy, deny, ny)
+\end{verbatim}
+
+En cada iteraci\'on ya no se reconstruyen \texttt{aa}, \texttt{bb} ni
+\texttt{cc}; solo se arma el lado derecho local \texttt{rx} o \texttt{ry}, que
+depende del campo de temperatura de la iteraci\'on actual.
 
 Las condiciones frontera en \texttt{cfx} y \texttt{cfy} coinciden con el
 secuencial y con OpenMP:
@@ -2719,12 +2732,12 @@ secuencial y con OpenMP:
 \medskip
 
 Tras la inicializaci\'on en host, se abre una regi\'on de datos que dura todo el
-bucle \texttt{do iter = 1, itermax}. El campo \texttt{tt}, los cuatro vectores
-planos y las fronteras viven en dispositivo durante todas las iteraciones:
+bucle \texttt{do iter = 1, itermax}. Los tres campos, fronteras y factores de
+Thomas viven en dispositivo durante todas las iteraciones:
 
 \begin{verbatim}
-  !$acc data copy(tt, aa, bb, cc, rr) &
-  !$acc      copyin(cfx, cfy, inv_dx2, inv_dy2)
+  !$acc data copy(tt_old, tt_mid, tt_new) &
+  !$acc      copyin(cfx, cfy, inv_dx2, inv_dy2, ax, cpx, denx, ay, cpy, deny)
 \end{verbatim}
 
 \noindent\textbf{Datos (regi\'on \texttt{data}).}
@@ -2734,11 +2747,10 @@ planos y las fronteras viven en dispositivo durante todas las iteraciones:
 \hline
 Cl\'ausula & Variable & Motivo \\
 \hline
-\texttt{copy} & \texttt{tt}, \texttt{aa}--\texttt{rr} &
-Se actualizan en cada iteraci\'on en dispositivo; al cerrar la regi\'on, el host
-recibe el estado final (\texttt{tt} para \texttt{checksum}). \\
-\texttt{copyin} & \texttt{cfx}, \texttt{cfy}, \texttt{inv\_dx2}, \texttt{inv\_dy2} &
-Constantes o fronteras fijadas en host antes del bucle; solo lectura en kernels. \\
+\texttt{copy} & \texttt{tt\_old}, \texttt{tt\_mid}, \texttt{tt\_new} &
+Campos de temperatura actual, intermedio y nuevo; se actualizan en dispositivo. \\
+\texttt{copyin} & \texttt{cfx}, \texttt{cfy}, \texttt{inv\_*}, factores &
+Fronteras, escalares y factorizaci\'on de Thomas; solo lectura en kernels. \\
 \hline
 \end{tabular}
 \end{center}
@@ -2748,11 +2760,11 @@ Constantes o fronteras fijadas en host antes del bucle; solo lectura en kernels.
 \medskip
 
 En multicore, \texttt{parallel loop gang} reparte filas ($j$) o columnas ($i$)
-entre los \emph{workers} de \texttt{ACC\_NUM\_CORES}. El ensamblado en
-\texttt{aa}/\texttt{bb}/\texttt{cc}/\texttt{rr} y la llamada a \texttt{tri} van
-en \texttt{loop seq} dentro de cada gang. \texttt{private(tx)} o
-\texttt{private(ty)} evita que dos gangs compartan el vector 1D de soluci\'on
-intermedia.
+entre los \emph{workers} de \texttt{ACC\_NUM\_CORES}. Dentro de cada gang, el
+armado del lado derecho y la llamada a \texttt{tri\_solve} van en orden
+secuencial porque Thomas tiene dependencias hacia adelante y hacia atr\'as.
+\texttt{private(rx,tx)} o \texttt{private(ry,ty)} evita que dos gangs compartan
+vectores temporales.
 
 \medskip
 
@@ -2761,46 +2773,45 @@ el equivalente es \texttt{present} (dato ya en la regi\'on \texttt{data}) y
 \texttt{private} (copia local por \texttt{gang}). Criterio an\'alogo:
 \begin{itemize}
   \item \texttt{present(...)}: arreglos residentes en \texttt{!\$acc data} que
-        el kernel lee o escribe (\texttt{tt}, \texttt{aa}--\texttt{rr},
-        \texttt{cfx}, \texttt{cfy}, escalares \texttt{inv\_dx2}/\texttt{inv\_dy2}).
-  \item \texttt{private(tx)} / \texttt{private(ty)}: igual que \texttt{rx}/\texttt{tx}
-        en OpenMP --- cada fila/columna resuelve su tridiagonal en local.
+        el kernel lee o escribe (\texttt{tt\_old}, \texttt{tt\_mid},
+        \texttt{tt\_new}, \texttt{cfx}, \texttt{cfy}, factores y escalares).
+  \item \texttt{private(rx,tx)} / \texttt{private(ry,ty)}: cada fila/columna arma
+        su lado derecho y resuelve su tridiagonal en local.
   \item \texttt{reduction(+:...)}: \texttt{residuo} y \texttt{checksum} se combinan
         entre unidades de ejecuci\'on al salir del bucle.
-  \item \texttt{copy}/\texttt{copyin} en \texttt{data}: \texttt{tt} y los vectores
-        planos se mueven o mantienen en dispositivo; \texttt{cfx}/\texttt{cfy} e
-        \texttt{inv\_*} entran solo al inicio (\texttt{copyin}).
+  \item \texttt{copy}/\texttt{copyin} en \texttt{data}: los campos se mantienen
+        en dispositivo; fronteras y factores entran solo al inicio.
 \end{itemize}
 
 \medskip
 
-Cada \texttt{do iter} ejecuta \textbf{cinco} tramos en dispositivo m\'as el
-\texttt{checksum} al cerrar la regi\'on:
+Cada \texttt{do iter} ejecuta seis tramos principales en dispositivo:
 
 \begin{center}
 \begin{tabular}{clll}
 \hline
 \# & Tramo & Bucle & Efecto \\
 \hline
-1 & Respaldo iteraci\'on & \texttt{collapse(2)} &
-    \texttt{tt(:,:,2)} $\leftarrow$ \texttt{tt(:,:,1)} \\
-2 & Ensambla barrido $y$ & \texttt{gang} $j=2,\ldots,n_y-1$ &
-    Llena \texttt{aa,bb,cc,rr} con \texttt{indicex} \\
-3 & Resuelve barrido $y$ & \texttt{gang} $j$ + \texttt{tri} &
-    \texttt{tt(:,j,1)} $\leftarrow$ soluci\'on fila $j$ \\
-4 & Ensambla barrido $x$ & \texttt{gang} $i=2,\ldots,n_x-1$ &
-    Llena vectores con \texttt{indicey} \\
-5 & Resuelve barrido $x$ & \texttt{gang} $i$ + \texttt{tri} &
-    Actualiza \texttt{tt(i,:,1)} \\
-6 & Residuo / parada & \texttt{collapse(2)} + \texttt{reduction} &
-    $\sum (T^{1}-T^{2})^2$; \texttt{exit} si $<$ \texttt{tolerancia2} \\
+1 & Fronteras de \texttt{tt\_mid} & \texttt{gang} &
+    Copia bordes inferior/superior desde \texttt{tt\_old} \\
+2 & Barrido $y$ & \texttt{gang} $j=2,\ldots,n_y-1$ &
+    Arma \texttt{rx}, llama \texttt{tri\_solve}, escribe \texttt{tt\_mid} \\
+3 & Fronteras de \texttt{tt\_new} & \texttt{gang} &
+    Copia bordes izquierdo/derecho desde \texttt{tt\_mid} \\
+4 & Barrido $x$ & \texttt{gang} $i=2,\ldots,n_x-1$ &
+    Arma \texttt{ry}, llama \texttt{tri\_solve}, escribe \texttt{tt\_new} \\
+5 & Residuo / parada & \texttt{collapse(2)} + \texttt{reduction} &
+    $\sum (T_{\mathrm{new}}-T_{\mathrm{old}})^2$; \texttt{exit} si converge \\
+6 & Actualizaci\'on & \texttt{collapse(2)} &
+    \texttt{tt\_old} $\leftarrow$ \texttt{tt\_new} si contin\'ua \\
 \hline
 \end{tabular}
 \end{center}
 
-Flujo: respaldo en plano 2 $\rightarrow$ barrido $y$ (ensambla+resuelve en 1D)
-$\rightarrow$ barrido $x$ (ensambla+resuelve) $\rightarrow$ residuo. La
-subrutina \texttt{tri} es secuencial (\texttt{routine seq}) dentro de cada gang.
+Flujo: \texttt{tt\_old} $\rightarrow$ barrido $y$ hacia \texttt{tt\_mid}
+$\rightarrow$ barrido $x$ hacia \texttt{tt\_new} $\rightarrow$ residuo. La
+subrutina \texttt{tri\_solve} es secuencial (\texttt{routine seq}) dentro de
+cada gang, pero las filas/columnas independientes se reparten en paralelo.
 
 \medskip
 
@@ -2811,115 +2822,113 @@ subrutina \texttt{tri} es secuencial (\texttt{routine seq}) dentro de cada gang.
 El bucle admite hasta \texttt{itermax = 20000} iteraciones y sale antes si
 \texttt{residuo < tolerancia2}, con la misma regla que el secuencial y OpenMP.
 
-\paragraph{Regi\'on 1: respaldo del plano anterior.}
-Antes de cada barrido se guarda la iteraci\'on previa en el tercer \'indice de
-\texttt{tt}:
+\paragraph{Regi\'on 1: fronteras intermedias.}
+Antes del barrido en $y$ se conservan las fronteras inferior y superior del
+campo intermedio:
 
 \begin{verbatim}
   do iter = 1, itermax
 
-     !$acc parallel loop collapse(2) present(tt)
-     do jj = 1, ny
-        do ii = 1, nx
-           tt(ii, jj, 2) = tt(ii, jj, 1)
-        end do
+     !$acc parallel loop present(tt_old, tt_mid)
+     do ii = 1, nx
+        tt_mid(ii, 1) = tt_old(ii, 1)
+        tt_mid(ii, ny) = tt_old(ii, ny)
      end do
      !$acc end parallel loop
 \end{verbatim}
 
-\noindent\textbf{Datos (regi\'on ACC 1).} \texttt{present(tt)}: toda la malla en
-dispositivo; cada $(i,j)$ se copia entre planos sin que un \texttt{gang} pise el
-nodo de otro (\texttt{collapse(2)}).
+\noindent\textbf{Datos (regi\'on ACC 1).} \texttt{present(tt\_old,tt\_mid)}:
+ambos campos residen en la regi\'on \texttt{data}; cada punto de frontera se
+copia una sola vez.
 
-\paragraph{Regiones 2--3: barrido en $y$.}
-Para cada fila $j$ interior, en \texttt{loop seq} se escriben coeficientes en
-\texttt{aa(indicex(ii,jj))}, \ldots seg\'un \ref{eq:coef_tridiagonal_x_2D_r}:
+\paragraph{Regi\'on 2: barrido en $y$.}
+Para cada fila $j$ interior se arma el lado derecho local, seg\'un
+\ref{eq:coef_tridiagonal_x_2D_r}:
 \begin{equation}
 r_i^{(x)} = -\frac{1}{(\Delta y)^2}\,T_{i,j-1}-\frac{1}{(\Delta y)^2}\,T_{i,j+1}.
 \end{equation}
-Luego cada gang llama a \texttt{tri} sobre el tramo
-\texttt{indicex(1,j):indicex(nx,j)} y copia \texttt{tx} a \texttt{tt(:,j,1)}:
+Luego cada gang llama a \texttt{tri\_solve} con los factores \texttt{cpx},
+\texttt{denx} y copia \texttt{tx} a \texttt{tt\_mid(:,j)}:
 
 \begin{verbatim}
-     !$acc parallel loop gang present(tt, aa, bb, cc, rr, cfx, inv_dx2, inv_dy2)
+     !$acc parallel loop gang present(tt_old, tt_mid, cfx, inv_dy2, ax, cpx, denx) &
+     !$acc      private(rx, tx)
      do jj = 2, ny - 1
         !$acc loop seq
         do ii = 2, nx - 1
-           aa(indicex(ii, jj)) = inv_dx2
-           bb(indicex(ii, jj)) = -2.d0 * (inv_dx2 + inv_dy2)
-           cc(indicex(ii, jj)) = inv_dx2
-           rr(indicex(ii, jj)) = -inv_dy2*tt(ii,jj-1,1) - inv_dy2*tt(ii,jj+1,1)
+           rx(ii) = -inv_dy2*tt_old(ii,jj-1) - inv_dy2*tt_old(ii,jj+1)
         end do
-        rr(indicex(1,jj)) = cfx(jj, 1)
-        rr(indicex(nx,jj)) = cfx(jj, 2)
-        ...
-     end do
-     !$acc end parallel loop
+        rx(1) = cfx(jj, 1)
+        rx(nx) = cfx(jj, 2)
 
-     !$acc parallel loop gang present(aa, bb, cc, rr, tt) private(tx)
-     do jj = 2, ny - 1
-        call tri(aa(indicex(1,jj):indicex(nx,jj)), ...)
+        call tri_solve(ax, cpx, denx, rx, tx, nx)
         do ii = 1, nx
-           tt(ii, jj, 1) = tx(ii)
+           tt_mid(ii, jj) = tx(ii)
         end do
      end do
      !$acc end parallel loop
 \end{verbatim}
 
-\noindent\textbf{Datos (regiones ACC 2--3).}
+\noindent\textbf{Datos (regi\'on ACC 2).}
 \begin{center}
 \small
 \begin{tabular}{lll}
 \hline
 Cl\'ausula & Variable & Motivo \\
 \hline
-\texttt{present} & \texttt{tt}, \texttt{aa}--\texttt{rr}, \texttt{cfx},
-\texttt{inv\_dx2}, \texttt{inv\_dy2} &
-Ensamblado: cada \texttt{gang} $j$ escribe su tramo en los vectores 1D con
-\texttt{indicex}. \\
-\texttt{present} & \texttt{aa}--\texttt{rr}, \texttt{tt} (resoluci\'on) &
-Cada \texttt{gang} lee el tramo que ensambl\'o y escribe \texttt{tt(:,j,1)}. \\
-\texttt{private(tx)} & \texttt{tx} &
-Vector soluci\'on temporal de la fila; no compartido entre gangs. \\
+\texttt{present} & \texttt{tt\_old}, \texttt{tt\_mid}, \texttt{cfx}, factores &
+Lectura del campo viejo, escritura del intermedio y factores constantes. \\
+\texttt{private(rx,tx)} & \texttt{rx}, \texttt{tx} &
+Lado derecho y soluci\'on temporal de la fila; no compartidos entre gangs. \\
 \hline
 \end{tabular}
 \end{center}
 
-\subsection{Barrido en $x$}
+\paragraph{Barrido en $x$}
 
-\paragraph{Regiones 4--5: ensamblado y resoluci\'on en $x$.}
-Se reutilizan los mismos vectores \texttt{aa}--\texttt{rr}, pero con
-\texttt{indicey}$(i,j)=j+n_y(i-1)$. En el borde inferior se impone Neumann con
-\texttt{bb=-1}, \texttt{cc=1}; en el superior, Dirichlet (\texttt{bb=1},
-\texttt{rr=cfy(i,2)}). Tras \texttt{tri} sobre
-\texttt{indicey(ii,1):indicey(ii,ny)}, se copia \texttt{ty} a \texttt{tt(ii,:,1)}.
+\medskip
 
-\noindent\textbf{Datos (regiones ACC 4--5).} Misma l\'ogica que en $y$ con
-\texttt{indicey}: \texttt{present(tt,aa,bb,cc,rr,cfy,inv\_*)} en ensamblado;
-\texttt{present(aa,bb,cc,rr,tt)} + \texttt{private(ty)} en resoluci\'on (cada
-columna $i$ su \texttt{ty}).
+\paragraph{Regiones 3--4: fronteras y barrido en $x$.}
+Primero se copian las fronteras izquierda y derecha desde \texttt{tt\_mid} a
+\texttt{tt\_new}. Despu\'es, cada columna interior arma \texttt{ry}, impone
+Neumann abajo (\texttt{ry(1)=cfy(i,1)}) y Dirichlet arriba
+(\texttt{ry(ny)=cfy(i,2)}), llama a \texttt{tri\_solve(ay,cpy,deny,...)} y
+escribe \texttt{tt\_new(i,:)}.
+
+\noindent\textbf{Datos (regiones ACC 3--4).} \texttt{present(tt\_mid,tt\_new)}
+en la copia de fronteras; \texttt{present(tt\_mid,tt\_new,cfy,ay,cpy,deny)} +
+\texttt{private(ry,ty)} en la resoluci\'on (cada columna $i$ tiene su
+\texttt{ry}/\texttt{ty}).
 
 \subsection{Residuo, actualizaci\'on y salida}
 \label{subsec:acc-residuo-salida}
 
 \paragraph{Regi\'on 6: residuo y parada.}
-Mismo criterio que OpenMP (suma de cuadrados entre planos 1 y 2, sin ra\'iz):
+Mismo criterio que OpenMP (suma de cuadrados entre \texttt{tt\_new} y
+\texttt{tt\_old}, sin ra\'iz):
 
 \begin{verbatim}
      residuo = 0.d0
-     !$acc parallel loop collapse(2) reduction(+:residuo) present(tt)
+     !$acc parallel loop collapse(2) reduction(+:residuo) present(tt_new, tt_old)
      do jj = 1, ny
         do ii = 1, nx
-           residuo = residuo + (tt(ii,jj,1)-tt(ii,jj,2))**2
+           residuo = residuo + (tt_new(ii,jj)-tt_old(ii,jj))**2
         end do
      end do
      !$acc end parallel loop
      if (residuo < tolerancia2) exit
+
+     !$acc parallel loop collapse(2) present(tt_old, tt_new)
+     do jj = 1, ny
+        do ii = 1, nx
+           tt_old(ii, jj) = tt_new(ii, jj)
+        end do
+     end do
   end do
 \end{verbatim}
 
 \noindent\textbf{Datos (regi\'on ACC 6, residuo).}
-\texttt{present(tt)}: lectura de ambos planos;
+\texttt{present(tt\_new,tt\_old)}: lectura de ambos campos;
 \texttt{reduction(+:residuo)}: acumulaci\'on segura en dispositivo/host.
 
 \paragraph{Salida y \texttt{checksum}.}
@@ -2927,66 +2936,60 @@ Tras \texttt{!\$acc end data} se imprimen iteraciones, residuo y suma del campo
 para el \emph{benchmark}:
 
 \begin{verbatim}
-  !$acc parallel loop collapse(2) reduction(+:checksum) present(tt)
+  !$acc parallel loop collapse(2) reduction(+:checksum) present(tt_new)
   do jj = 1, ny
      do ii = 1, nx
-        checksum = checksum + tt(ii, jj, 1)
+        checksum = checksum + tt_new(ii, jj)
      end do
   end do
   write(*, '(A,I0)') 'iteraciones=', iter
   write(*, '(A,ES24.16)') 'checksum=', checksum
 \end{verbatim}
 
-\noindent\textbf{Datos (checksum).} \texttt{present(tt)} + \texttt{reduction(+:checksum)}:
+\noindent\textbf{Datos (checksum).} \texttt{present(tt\_new)} + \texttt{reduction(+:checksum)}:
 suma global del campo para validaci\'on num\'erica en el \emph{benchmark}.
 
-A diferencia del secuencial, no se vuelca la malla a disco; el script de medici\'on
-parsea \texttt{iteraciones=} y \texttt{checksum=}.
+Si se define \texttt{CALOR2D\_DUMP\_MESH}, el programa vuelca \texttt{tt\_new} a
+\texttt{resultado\_malla.dat}. El script de medici\'on parsea \texttt{iteraciones=},
+\texttt{residuo=} y \texttt{checksum=}.
 
 \subsection{M\'odulo \texttt{calor2D\_acc\_utils}}
 
-\subsubsection{Funciones \texttt{indicex} e \texttt{indicey}}
+\subsubsection{Subrutinas \texttt{tri\_factor} y \texttt{tri\_solve}}
 
-Mapean $(i,j)$ a la posici\'on en el vector plano seg\'un el barrido (column-major
-en $y$, por fila en $x$). Llevan \texttt{!\$acc routine seq} para poder
-usarse dentro de kernels:
-
-\begin{verbatim}
-  indicex = ii + acc_nx * (jj - 1)
-  indicey = jj + acc_ny * (ii - 1)
-\end{verbatim}
-
-\subsubsection{Subrutina \texttt{tri}}
-
-Igual que en \texttt{REFERENCIA/paralelo-gpu/openacc/calor2D/tridiagonal.f90}:
-eliminaci\'on gaussiana de una tridiagonal \textbf{sin} factorizar de antemano;
-modifica \texttt{b} y \texttt{r} y devuelve \texttt{u}:
+\texttt{tri\_factor} calcula los denominadores y coeficientes modificados de
+Thomas una sola vez. \texttt{tri\_solve} lleva \texttt{!\$acc routine seq} porque
+se invoca desde cada \texttt{gang}; modifica solo \texttt{rx} o \texttt{ry}, no
+los coeficientes:
 
 \begin{verbatim}
-  subroutine tri(a, b, c, r, u, n)
+  subroutine tri_solve(a, cp, den, r, u, n)
     !$acc routine seq
     ...
+    r(1) = r(1) / den(1)
     do i = 2, n
-       r(i) = r(i) - (a(i)/b(i-1))*r(i-1)
-       b(i) = b(i) - (a(i)/b(i-1))*c(i-1)
+       r(i) = (r(i) - a(i)*r(i-1)) / den(i)
     end do
-    u(n) = r(n)/b(n)
+    u(n) = r(n)
     do i = n-1, 1, -1
-       u(i) = (r(i) - c(i)*u(i+1))/b(i)
+       u(i) = r(i) - cp(i)*u(i+1)
     end do
-  end subroutine tri
+  end subroutine tri_solve
 \end{verbatim}
 
 \subsection{Mediciones (\texttt{ACC/scripts/})}
 
 \texttt{benchmark\_acc\_thomas.py} compila el mismo fuente \textbf{sin}
 \texttt{-acc} (referencia \texttt{serial}) y con \texttt{-acc=multicore},
-barre \texttt{ACC\_NUM\_CORES} de 1 a 6, repite corridas con mediana de tiempo
-de pared y escribe \texttt{acc\_calor2D\_h6.dat}. El speedup reportado es
+barre \texttt{ACC\_NUM\_CORES} de $1$ a $7$, con $5$ corridas, $1$ warmup y
+mediana de tiempo de pared; escribe \texttt{acc\_desarrollo\_h7.dat}. El speedup reportado es
 $S_p = t_{\mathrm{serial}}/t_p$, donde $t_{\mathrm{serial}}$ es el binario sin
-directivas OpenACC. \texttt{plot\_acc\_speedup.py} genera las figuras de tiempo
-y speedup. En el entorno de prueba, \texttt{nvaccelinfo} no list\'o GPU; no se
-incluyen curvas \texttt{-acc=gpu}.
+directivas OpenACC. La fuente en \texttt{REFERENCIA/paralelo-gpu/openacc} se
+revis\'o solo como diagn\'ostico y no se usa como curva comparable: conserva
+directivas OpenMP en los barridos que resuelven las tridiagonales y no entrega
+\texttt{checksum} equivalente. \texttt{generar\_figuras\_informe.py} y
+\texttt{plot\_acc\_speedup.py} generan las figuras comparativas. En el entorno de
+prueba, \texttt{nvaccelinfo} no list\'o GPU; no se incluyen curvas \texttt{-acc=gpu}.
 
 \medskip
 
@@ -2995,54 +2998,103 @@ incluyen curvas \texttt{-acc=gpu}.
 producci\'on el programa converge en \textbf{15103} iteraciones, igual que
 \texttt{OMP/calor2D\_parallel.f90}. El secuencial en
 \texttt{SECUENCIAL/calor2D} sigue en $\approx 9135$ pasos (dos planos de
-temperatura); la comparaci\'on de rendimiento ACC--OMP es la pertinente.
+temperatura). La optimizaci\'on clave fue mover \texttt{tri\_factor} fuera del
+bucle iterativo.
 
 \section{Resultados caso 2D con OpenACC}
 
-Se us\'o \texttt{nvfortran}, $5$ corridas y $2$ warmups por punto (mediana).
-La tabla~\ref{tab:acc-speedup-h6} resume tiempos y speedup respecto al serial
-sin \texttt{-acc}.
+Se us\'o \texttt{nvfortran} con \texttt{-acc=multicore}, $5$ corridas y $1$ warmup
+por punto (mediana). La Figura~\ref{fig:temp_2d_acc} muestra la placa de temperatura
+del desarrollo (\texttt{calor2D\_acc}) tras convergencia; la Tabla~\ref{tab:acc-speedup-h7}
+resume tiempos y speedup respecto al serial sin \texttt{-acc} del mismo c\'odigo.
 
-\begin{table}[h]
+\begin{figure}[ht]
   \centering
-  \caption{OpenACC multicore, malla $300\times 150$, $15103$ iter (mediana).}
-  \label{tab:acc-speedup-h6}
+  \captionsetup{justification=centering}
+  \includegraphics[width=0.8\textwidth]{calor2D_plate_acc.png}
+  \caption{Distribuci\'on de temperatura en el caso 2D con OpenACC
+  (\texttt{ACC/paralelo/calor2D\_acc}), malla $300\times 150$, $15103$ iteraciones.}
+  \label{fig:temp_2d_acc}
+\end{figure}
+
+\begin{table}[ht]
+  \centering
+  \caption{OpenACC desarrollo factorizado, malla $300\times 150$, $15103$ iter
+  (mediana). $S_p=t_{\mathrm{serial}}/t_p$ con $t_{\mathrm{serial}}$ sin
+  \texttt{-acc}. La curva usa el serial como punto $p=1$; la fila
+  \texttt{multicore} con \texttt{ACC\_NUM\_CORES}$=1$ se muestra como diagn\'ostico.}
+  \label{tab:acc-speedup-h7}
   \begin{tabular}{l r r r}
     \hline
     Caso & $p$ & $t_p$ [s] & $S_p$ \\
     \hline
-    serial      & 1 & 9.67 & 1.00 \\
-    multicore   & 1 & 8.97 & 1.08 \\
-    multicore   & 2 & 5.24 & 1.85 \\
-    multicore   & 3 & 3.91 & 2.48 \\
-    multicore   & 4 & 3.38 & 2.86 \\
-    multicore   & 5 & 2.90 & 3.34 \\
-    multicore   & 6 & 2.69 & 3.59 \\
+    serial (sin \texttt{-acc}) & 1 & 9.43 & 1.00 \\
+    multicore & 1 & 8.76 & 1.08 \\
+    multicore & 2 & 5.01 & 1.88 \\
+    multicore & 3 & 3.75 & 2.52 \\
+    multicore & 4 & 3.15 & 2.99 \\
+    multicore & 5 & 2.92 & 3.23 \\
+    multicore & 6 & 2.75 & 3.44 \\
+    multicore & 7 & 2.55 & 3.70 \\
     \hline
   \end{tabular}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[ht]
   \centering
-  \includegraphics[width=0.85\textwidth]{acc_calor2D_h6_speedup.png}
-  \caption{Speedup OpenACC multicore frente al serial sin \texttt{-acc}
-  (\texttt{acc\_calor2D\_h6}), curva ideal $S_p=p$.}
-  \label{fig:acc-speedup-h6}
+  \includegraphics[width=0.85\textwidth]{acc_desarrollo_h7_speedup.png}
+  \caption{Aceleraci\'on $S_p=t_{\mathrm{serial}}/t_p$ del desarrollo OpenACC multicore
+  frente al serial sin \texttt{-acc} ($p=1$); curva ideal $S_p=p$.}
+  \label{fig:acc-speedup-h7}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[ht]
   \centering
-  \includegraphics[width=0.85\textwidth]{acc_calor2D_h6_tiempos.png}
-  \caption{Tiempo de pared por n\'umero de n\'ucleos (\texttt{ACC\_NUM\_CORES}).}
-  \label{fig:acc-tiempos-h6}
+  \includegraphics[width=0.85\textwidth]{acc_desarrollo_h7_tiempos.png}
+  \caption{Tiempo de pared (mediana): $p=1$ serial sin \texttt{-acc}; $p\ge 2$,
+  \texttt{ACC\_NUM\_CORES}$=p$.}
+  \label{fig:acc-tiempos-h7}
 \end{figure}
 
-En multicore, $S_6\approx 3.6 < 6$: sublineal por \texttt{gang} y \texttt{tri}
-secuencial por fila/columna. Es algo menor que OpenMP con tres campos
-($S_6\approx 4.2$), pero el \texttt{checksum} y las \textbf{15103} iteraciones
-coinciden con \texttt{OMP/calor2D\_parallel.f90} (misma tolerancia y malla).
-La variante ACC difiere en el \emph{layout} 1D de coeficientes, no en la
-soluci\'on de referencia validada num\'ericamente.
+\subsection{Alcance de la referencia OpenACC}
+
+La fuente \texttt{REFERENCIA/paralelo-gpu/openacc/calor2D} no se toma como una
+referencia OpenACC comparable al desarrollo. Al revisarla se observa que solo el
+ensamblaje del primer barrido usa \texttt{!\$acc parallel loop}; los lazos que
+resuelven las tridiagonales (\texttt{inversor\_y} e \texttt{inversor\_x}) y el
+segundo ensamblaje conservan directivas \texttt{!\$omp parallel do}. Compilada con
+\texttt{-acc=multicore}, esas regiones OpenMP no se activan y el programa queda
+h\'ibrido/incompleto para esta comparaci\'on.
+
+
+\subsection{Comparaci\'on global OMP y OpenACC}
+
+Las Figuras~\ref{fig:global-speedup-h7} y~\ref{fig:global-tiempos-h7}
+superponen las variantes comparables con la misma metodolog\'ia ($5$ repeticiones,
+$1$ warmup, hilos/n\'ucleos $1$--$7$): OMP desarrollo, OMP referencia y ACC
+desarrollo.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\textwidth]{comparacion_speedup_global_h7.png}
+  \caption{Aceleraci\'on $S_p$ (cada curva respecto a su serial o $t_1$ de calibraci\'on):
+  OMP desarrollo, OMP referencia y ACC desarrollo.}
+  \label{fig:global-speedup-h7}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\textwidth]{comparacion_tiempos_global_h7.png}
+  \caption{Tiempos de pared absolutos (mediana) para las variantes comparables.}
+  \label{fig:global-tiempos-h7}
+\end{figure}
+
+En multicore del desarrollo, $S_7\approx 3.70$: sigue siendo sublineal porque
+\texttt{tri\_solve} es secuencial dentro de cada fila/columna, pero al eliminar
+el reensamblado de \texttt{aa}/\texttt{bb}/\texttt{cc} y factorizar una sola vez,
+el tiempo absoluto a $7$ n\'ucleos queda en $2.55$~s. En esta medici\'on supera al
+desarrollo OMP ($3.41$~s a $7$ hilos), manteniendo el mismo \texttt{checksum} y
+las \textbf{15103} iteraciones.
 
 
 \section{Conclusiones}
