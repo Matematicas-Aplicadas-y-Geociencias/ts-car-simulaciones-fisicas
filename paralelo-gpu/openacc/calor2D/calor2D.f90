@@ -86,6 +86,27 @@ Program Calor2D
      cfy(jj,2) = 0.d0
   end do
   !
+  ! acc data permite controlar los intercambios de informaci'on entre la tarjeta de video
+  ! y la cpu. Tiene las siguiente opciones
+  !
+  ! copy (lista_variables) reserva memoria en la gpu y copia la informacion de la cpu a
+  !                        la gpu en la entrada de la region paralela y copia los datos
+  !                        de la gpu a la cpu al salir de la region paralela
+  !
+  ! copyin (lista_variables) reserva memoria en la gpu y copia la informacion de la cpu
+  !                          a la gpu solo al inicio de la region paralela
+  !
+  ! copyout (lista_variables)  reserva memoria en la gpu y copia la informacion de la gpu
+  !                            a la cpu solo al final de la region paralela
+  !$acc data copy(&
+  !$acc           tt(1:nx,1:ny,1:2) &
+  !$acc           )&
+  !$acc      create(&
+  !$acc           aa(1:nx*ny), bb(1:nx*ny), cc(1:nx*ny), rr(1:nx*ny), ty(1:nx*ny) &
+  !$acc           )&
+  !$acc      copyin(&
+  !$acc           deltax, deltay, cfx(1:ny,1:2), cfy(1:nx,1:2) &
+  !$acc           )
   bucle_iteraciones: do iter = 1, itermax
      !
      ! Inicializamos el valor de la iteraci'on anterior
@@ -169,6 +190,7 @@ Program Calor2D
         !
      end do inversor_y
      !$acc end parallel loop
+     ! $ acc end data
      !
      !---------------------------------------------------------------
      !
@@ -256,6 +278,8 @@ Program Calor2D
      ! if( residuo < tolerancia )exit
      !
   end do bucle_iteraciones
+  !
+  !$acc end data
   !
   write(*,*) "Convergencia en ", iter, " iteraciones"
   !
