@@ -1,8 +1,10 @@
 """
-benchmark.py — Mide el tiempo de ejecución de calor2D (128×128) con OpenMP
-usando OMP_NUM_THREADS = 1 (serial), 2, 3, ..., 20 hilos.
+ejecutar_benchmark.py — Mide el tiempo de ejecución de calor2D (malla NX×NY)
+con OpenMP usando OMP_NUM_THREADS = 1 (serial), 2, 3, ... hasta THREADS_LIST.
 
-Salida: benchmark_results.csv  con columnas  threads, time_s
+Recompila el solver para cada caso y lo ejecuta NUM_RUNS veces por nº de hilos.
+Salida: ../resultados/benchmark_resultados.csv
+        (columnas: threads, time_mean, time_stddev, time_min, time_max)
 """
 
 import subprocess
@@ -17,19 +19,22 @@ import time as time_module
 # ---------------------------------------------------------------------------
 NX = 256
 NY = 256
-THREADS_LIST = list(range(1, 11))     # 1 = serial, 2..20 = paralelo
+THREADS_LIST = list(range(1, 11))     # 1 = serial, 2.. = paralelo
 NUM_RUNS     = 5                       # repetir cada caso 5 veces
-OUTPUT_CSV   = "benchmark_results.csv"
+OUTPUT_CSV   = "benchmark_resultados.csv"
 BINARY       = "./calor2D_bench"
 MOD_SRC      = "mod_utiles.f90"
-MOD_TMP      = "mod_utiles_bench.f90"
-WORK_DIR     = os.path.dirname(os.path.abspath(__file__))
+MOD_TMP      = "mod_utiles_bench.f90"      # módulo temporal que se genera al vuelo
+WORK_DIR     = os.path.dirname(os.path.abspath(__file__))         # solucionador_calor2D/
+RESULTS_DIR  = os.path.join(os.path.dirname(WORK_DIR), "resultados")
 
 
 # ---------------------------------------------------------------------------
-# 1. Crear mod_utiles_bench.f90 con nx=128, ny=128
+# 1. Generar mod_utiles_bench.f90 (copia de mod_utiles.f90 con nx=NX, ny=NY)
+#    Es un archivo TEMPORAL de compilación: se regenera en cada ejecución a
+#    partir de mod_utiles.f90, por eso no se versiona en git.
 # ---------------------------------------------------------------------------
-def create_module_128():
+def create_module():
     src_path = os.path.join(WORK_DIR, MOD_SRC)
     dst_path = os.path.join(WORK_DIR, MOD_TMP)
 
@@ -43,7 +48,7 @@ def create_module_128():
     with open(dst_path, "w") as f:
         f.write(content)
 
-    print(f"Módulo 128×128 creado: {MOD_TMP}")
+    print(f"Módulo {NX}×{NY} generado: {MOD_TMP}")
 
 
 # ---------------------------------------------------------------------------
@@ -52,7 +57,7 @@ def create_module_128():
 def compile_case():
     cmd = [
         "gfortran", "-O2", "-fopenmp",
-        MOD_TMP, "tridiagonal.f90", "calor2D.f90",
+        MOD_TMP, "tridiagonal.f90", "calor2D_paralelo.f90",
         "-o", BINARY,
     ]
     print("Compilando:", " ".join(cmd))
@@ -110,7 +115,7 @@ def main():
     print(f"Benchmark calor2D {NX}×{NY}  —  hilos: {THREADS_LIST[0]}..{THREADS_LIST[-1]}")
     print("=" * 55)
 
-    create_module_128()
+    create_module()
     compile_case()
 
     results = []
@@ -131,13 +136,14 @@ def main():
     # -----------------------------------------------------------------------
     # 4. Guardar resultados en CSV
     # -----------------------------------------------------------------------
-    out_path = os.path.join(WORK_DIR, OUTPUT_CSV)
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    out_path = os.path.join(RESULTS_DIR, OUTPUT_CSV)
     with open(out_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=["threads", "time_mean", "time_stddev", "time_min", "time_max"])
         writer.writeheader()
         writer.writerows(results)
 
-    print(f"\nResultados guardados en: {OUTPUT_CSV}")
+    print(f"\nResultados guardados en: {out_path}")
 
     # Resumen en pantalla
     t_s = results[0]["time_mean"]   # tiempo serial promedio (1 hilo)

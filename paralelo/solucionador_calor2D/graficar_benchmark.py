@@ -1,19 +1,23 @@
 """
-plot_benchmark.py — Grafica los resultados del benchmark de calor2D.
+graficar_benchmark.py — Grafica los resultados del benchmark de calor2D.
 
-Lee benchmark_results.csv y genera dos paneles:
+Lee ../resultados/benchmark_resultados.csv y genera tres paneles:
   - Tiempo de ejecución vs número de procesadores
   - Speedup real vs ideal
+  - Eficiencia paralela
+La figura se guarda en ../graficas/.
 """
 
 import csv
 import os
 import matplotlib.pyplot as plt
-from benchmark import NX,NY,NUM_RUNS
+from ejecutar_benchmark import NX, NY, NUM_RUNS
 
-WORK_DIR  = os.path.dirname(os.path.abspath(__file__))
-DATA_FILE = os.path.join(WORK_DIR, "benchmark_results.csv")
-OUT_FILE  = os.path.join(WORK_DIR, f"Grafica con {NUM_RUNS} ejecuciones en una malla de {NX}x{NY}.png")
+WORK_DIR     = os.path.dirname(os.path.abspath(__file__))         # solucionador_calor2D/
+PARALELO_DIR = os.path.dirname(WORK_DIR)
+DATA_FILE    = os.path.join(PARALELO_DIR, "resultados", "benchmark_resultados.csv")
+GRAFICAS_DIR = os.path.join(PARALELO_DIR, "graficas")
+OUT_FILE     = os.path.join(GRAFICAS_DIR, f"benchmark_{NX}x{NY}_{NUM_RUNS}_ejecuciones.png")
 
 
 def load_data():
@@ -105,6 +109,7 @@ def main():
     ax.grid(True, alpha=0.35)
 
     plt.tight_layout()
+    os.makedirs(GRAFICAS_DIR, exist_ok=True)
     plt.savefig(OUT_FILE, dpi=150, bbox_inches="tight")
     print(f"Gráfica guardada en: {OUT_FILE}")
     plt.show()
