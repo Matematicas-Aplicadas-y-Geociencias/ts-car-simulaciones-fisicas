@@ -136,7 +136,7 @@ Partiendo de la ecuación~\eqref{eq:Laplace}, que en una dimensión tiene la sig
 \end{equation}       
 para aproximar la segunda derivada, recurrimos al desarrollo en serie de Taylor de la función $T$
 en torno a $x$, donde $\Delta x$ es el espaciamiento de la malla sobre la que se resuelve la ecuación.
-En la figura~\ref{fig:malla1D} se muestra la discretización resultante.
+En la Figura~\ref{fig:malla1D} se muestra la discretización resultante.
 
 
 \begin{equation}
@@ -250,7 +250,110 @@ la temperatura crecería o decrecería indefinidamente.
 
 \subsubsection{Caso 2D}
 
+Partiendo de igual forma de la ecuación~\eqref{eq:Laplace},
+\begin{equation}
+       \frac{\partial^2 T}{\partial x^2} + \frac{\partial^2 T}{\partial y^2} = 0.
+\end{equation}
+Al igual que en el caso 1D, discretizamos el dominio de la ecuación
+empleando una malla rectangular uniforme con espaciamientos $\Delta x$ y
+$\Delta y$, y adoptamos la notación $T_{i,j} \equiv T(x_i, y_j)$ con
+$x_i = i\,\Delta x$, $y_j = j\,\Delta y$. Aplicando la diferencia centrada
+de segundo orden a cada una de las derivadas
+parciales se obtiene la aproximación de cinco puntos
+\begin{equation}
+\frac{T_{i+1,j} - 2\, T_{i,j} + T_{i-1,j}}{\Delta x^{2}}
++ \frac{T_{i,j+1} - 2\, T_{i,j} + T_{i,j-1}}{\Delta y^{2}}
+= 0.
+\end{equation}
+En el caso particular de mallas con $\Delta x = \Delta y \equiv h$, la
+expresión anterior se simplifica al \emph{stencil de cinco puntos}
+\begin{equation}
+T_{i+1,j} + T_{i-1,j} + T_{i,j+1} + T_{i,j-1} - 4\, T_{i,j} = 0,
+\qquad i = 1,\dots,N_x-2, \; j = 1,\dots,N_y-2,
+\label{eq:laplace2D}
+\end{equation}
+donde $N_x$ y $N_y$ son los números totales de nodos en cada dirección.
+En la Figura~\ref{fig:malla2D} se muestra la discretización resultante,
+junto con el stencil que conecta cada nodo interior con sus cuatro vecinos.
 
+\begin{figure}[h]
+       \centering
+       \includegraphics[width=0.55\linewidth]{images/malla2D.pdf}
+       \caption{Discretización del dominio bidimensional y stencil de
+                cinco puntos asociado a la ecuación~\eqref{eq:laplace2D}.}
+       \label{fig:malla2D}
+\end{figure}
+
+Suponiendo que se quiere resolver la ecuación de Laplace en el rectángulo
+$[0,L_x]\times[0,L_y]$ con condiciones de frontera de Dirichlet en los
+cuatro lados,
+\begin{align}
+T(0,y)   &= T^{\text{O}}(y), &
+T(L_x,y) &= T^{\text{E}}(y), \\
+T(x,0)   &= T^{\text{S}}(x), &
+T(x,L_y) &= T^{\text{N}}(x),
+\end{align}
+para ejemplificar el método discretizamos el dominio en $N_x = N_y = 4$
+nodos por lado, con $h = L_x/(N_x-1) = L_y/(N_y-1)$. Para escribir el
+sistema en forma matricial, los valores $T_{i,j}$ se reordenan en un
+vector unidimensional mediante una numeración lexicográfica
+$k = i + j\, N_x$, de modo que el sistema toma la forma $A\,\mathbf{T} = \mathbf{b}$
+con $\mathbf{T}\in\mathbb{R}^{N_x N_y}$. La matriz $A$ presenta una
+estructura \emph{bloque-tridiagonal}
+\begin{equation}
+A =
+\begin{pmatrix}
+I & 0 & 0 & 0 \\
+I & B & I & 0 \\
+0 & I & B & I \\
+0 & 0 & 0 & I
+\end{pmatrix},
+\qquad
+B =
+\begin{pmatrix}
+1 & 0 & 0 & 0 \\
+1 & -4 & 1 & 0 \\
+0 & 1 & -4 & 1 \\
+0 & 0 & 0 & 1
+\end{pmatrix},
+\label{eq:matrizDirichlet2D}
+\end{equation}
+donde cada bloque es de tamaño $N_x \times N_x$, $I$ es la identidad y $B$
+codifica el acoplamiento dentro de una misma fila de la malla. Los
+bloques identidad en el primer y último bloque-fila imponen los valores
+prescritos en las fronteras sur y norte respectivamente, mientras que las
+entradas iguales a $1$ en la primera y última fila de $B$ imponen los
+valores prescritos en las fronteras oeste y este. El vector $\mathbf{b}$
+contiene los valores $T^{\text{O,E,S,N}}$ en las posiciones correspondientes
+a los nodos frontera y ceros en las demás.
+
+Suponiendo ahora condiciones de frontera de Neumann en los cuatro lados,
+con flujos prescritos $g_{\text{O}}, g_{\text{E}}, g_{\text{S}}, g_{\text{N}}$
+en cada uno, el sistema de ecuaciones queda prácticamente igual salvo por
+las ecuaciones asociadas a los nodos frontera. En cada lado se aproxima la
+derivada normal mediante una diferencia adelantada o atrasada según
+corresponda. Por ejemplo, en las fronteras oeste y este se tiene
+\begin{equation*}
+\frac{T_{1,j} - T_{0,j}}{h} = g_{\text{O}}, \qquad
+\frac{T_{N_x-1,j} - T_{N_x-2,j}}{h} = g_{\text{E}},
+\end{equation*}
+y análogamente en las fronteras sur y norte para la derivada respecto de
+$y$. Las filas correspondientes de la matriz~\eqref{eq:matrizDirichlet2D}
+se modifican introduciendo entradas $-1$ y $+1$ en los nodos vecinos, y el
+vector del lado derecho recibe los valores $g_{*}\, h$ en las posiciones
+de frontera.
+
+Para que la solución exista físicamente, en el caso puramente Neumann debe
+satisfacerse la condición de compatibilidad
+\begin{equation}
+\oint_{\partial\Omega} g\, ds = 0,
+\end{equation}
+es decir, el flujo neto a través de la frontera del dominio debe ser nulo;
+de lo contrario, en estado estacionario y sin fuentes internas, el sistema
+no alcanzaría el equilibrio térmico. Esta condición es la generalización
+bidimensional de la relación $g_0 + g_L = 0$ obtenida en el caso 1D y se
+sigue directamente del teorema de la divergencia aplicado a la ecuación de
+Laplace.
 
 \section{Metodología e implementación}
 \label{sec:Metodologia}
