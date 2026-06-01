@@ -14,6 +14,8 @@
 \usepackage[output-decimal-marker={,},per-mode=symbol]{siunitx}% Unidades del SI con coma decimal
 \usepackage{placeins}                          % Comando \FloatBarrier
 \usepackage[natbib,abbreviate=true,doi=false,style=numeric-comp,giveninits=true,sorting=none]{biblatex} % Bibliografía moderna (requiere biber)
+\usepackage{tikz}
+\usetikzlibrary{decorations.pathreplacing,calligraphy}
 
 \addbibresource{MyBibliography.bib}            % Archivo .bib con las referencias
 
@@ -68,7 +70,6 @@ PARA SIMULACIONES FÍSICAS\\[1ex]
 El flujo de calor por difusión en un medio continuo se rige por la ley de Fourier,
 que establece que el flujo de calor $\vec{J}_{q}$ es proporcinal al gradiente negativo
 de la temperatura, 
-
 \begin{equation}
        \vec{J_q} = - \kappa \nabla T,
        \label{eq:Fourier}
@@ -76,21 +77,181 @@ de la temperatura,
 donde $\kappa$ representa la conductividad térmica del material.
 Al combinar \eqref{eq:Fourier}, con la ecuación de continuidad de la energía interna, 
 en ausencias de fuentes, obtenemos la ecuación de calor 
-
-
 \begin{equation}
 \rho \, \, \partial_t U =  \rho \, c_p  \, \partial T =
 - \nabla \cdot \left( \vec{J}_{q} \right) = k \nabla^2 T 
 \quad \Rightarrow \quad 
 \partial_t T = \alpha \nabla^2 T,
+\label{eq:calor}
+\end{equation}
+con $\alpha = k/(\rho \, c_p)$. Nos centramos en el régimen estacionario para una y dos dimensiones sobre un 
+dominio rectangular $\Omega$, con distintitas condiciones en la frontera $\partial \Omega$,
+En este caso, la ecuación \eqref{eq:calor} toma la forma de una ecuación de Laplace,
+
+\begin{equation}
+       \nabla^2 T = 0
+       \label{eq:Laplace}
 \end{equation}
 
-con $\alpha = k/(\rho \, c_p)$. Estamos interesando en el caso $1D$ y $2D$, sobre un 
-domonio rectangular $\Omega$. 
+\subsection{Condiciones de Frontera}
+
+Para la ecuación de Laplace, consideramos dos tipos de condiciones sobre la frontera $\partial \Omega$ del dominio rectangular:
+
+\textbf{Condiciones tipo Dirichlet:} se impone el valor de la temperatura sobre la frontera,
+
+\begin{equation}
+T(\mathbf{x}) = T_D(\mathbf{x}), \qquad \mathbf{x} \in \partial\Omega_D,
+\label{eq:Dirichlet}
+\end{equation}
+
+donde $T_D$ es una función conocida, para nuestro caso la tomaremos como constante, y $\partial \Omega_D$
+denota la porción de la frontera donde se aplica la condición.
 
 
+\textbf{Condiciones tipo Neumann:} se impone el valor del flujo normal de calor sobre la frontera, 
+
+\begin{equation}
+-k\frac{\partial T}{\partial n} = q_N(\mathbf{x}), \qquad \mathbf{x} \in \partial\Omega_N,
+\label{eq:Neumann}
+\end{equation}
+o bien, de forma equivalente, la derivada normal de la temperatura:
+\begin{equation}
+\frac{\partial T}{\partial n} = g_N(\mathbf{x}), \qquad \mathbf{x} \in \partial\Omega_N,
+\end{equation}
+donde $\partial/\partial n$ denota la derivada en la dirección normal exterior a la frontera, 
+$q_{N}$ es el flujo dado.
 
 %
+\subsection{Diferencias Finitas}
+Para resolver numéricamente la ecuación es necesario discretizar su dominio. 
+El método de diferencias finitas logra esto aproximando las derivadas mediante 
+desarrollos en serie de Taylor de la función que se quiere resolver.
+
+\subsubsection{Caso 1D}
+
+Partiendo de la ecuación~\eqref{eq:Laplace}, que en una dimensión tiene la siguiente forma, 
+
+\begin{equation}
+       \frac{d^2 T}{dx^2} = 0,
+\end{equation}       
+para aproximar la segunda derivada, recurrimos al desarrollo en serie de Taylor de la función $T$
+en torno a $x$, donde $\Delta x$ es el espaciamiento de la malla sobre la que se resuelve la ecuación.
+En la figura~\ref{fig:malla1D} se muestra la discretización resultante.
+
+
+\begin{equation}
+       \frac{d^2 T}{d x^2} \approx \frac{T_{i+1} - 2 \, T_{i} + T_{i-1}}{(\Delta x)^2}
+       = 0.
+\end{equation}
+donde adoptamos la notación,
+$T_i \equiv T(x_i)$, $T_{i\pm 1} \equiv T(x_i \pm \Delta x)$. Se observa que el problema continuo 
+se reduce a uno lineal
+\begin{equation}
+    T_{i+1} - 2\, T_i + T_{i-1} = 0, \qquad i = 1, \dots, N-2,
+    \label{eq:laplaceDisc}
+\end{equation}
+donde $N$ es el número total de nodos en la malla. Las ecuaciones en los nodos de frontera 
+$(i=0)$ y $(i=N-1)$ se sustituyen por las condiciones de fronter correspondientes.
+
+\begin{figure}[h]
+       \centering
+       \includegraphics[width=\linewidth]{images/malla1D.png}
+       \caption{Discretización del espacio.}
+       \label{fig:malla1D}
+\end{figure}
+
+Suponiendo que queremos resolver la ecuación de Laplace en el intervalo
+$[0, L]$, con condiciones de frontera de Dirichlet, de tal forma que fijamos el valor de la temperatura
+en los extremos,
+
+\begin{equation}
+       T(0) = T_0, \qquad T(L) = T_L,
+\end{equation}
+para ejemplificar el método, discretizamos el dominio en $N=6$ nodos, con $\Delta x = L /(N-1)$.
+La ecuación discretizada~\eqref{eq:laplaceDisc} se aplica en los nodos interiores $i=1,2,3,4$, 
+mientras que en los nodos de frontera imponemos directamente los valores dados por las condiciones de frontera. De tal forma que obtenemos, 
+el siguiente sistema de ecuaciones,
+\begin{equation}
+       \begin{pmatrix}
+              1 & 0 & 0 & 0 & 0 & 0 \\
+              1 & -2 & 1 & 0 & 0 & 0 \\
+              0 & 1 & -2 & 1 & 0 & 0 \\
+              0 & 0 & 1 & -2 & 1 & 0 \\
+              0 & 0 & 0 & 1 & -2 & 1 \\
+              0 & 0 & 0 & 0 & 0  & 1 
+       \end{pmatrix}
+       \begin{pmatrix}
+              T_0 \\
+              T_1 \\
+              T_2 \\ 
+              T_3 \\
+              T_4 \\
+              T_5 \\
+       \end{pmatrix}
+       = 
+       \begin{pmatrix}
+              T_0 \\
+              0 \\
+              0 \\ 
+              0 \\
+              0 \\
+              T_L \\
+       \end{pmatrix}
+\end{equation}
+Suponiendo ahora condiciones frontera de Neumann, en los dos extremos,
+\begin{equation}
+\frac{dT}{dx}\bigg|_{x=0} = g_0, \qquad \frac{dT}{dx}\bigg|_{x=L} = g_L,
+\end{equation}
+el sistema ecuaciones queda prácticamente igual salvo por las ecuaciones asociadas a los nodos frontera. 
+En cada extremo, se aproxima la derivada mediante una diferencia adelanta en $x=0$
+\begin{equation*}
+       \frac{dT}{dx} \approx \frac{T_1 - T_0}{\Delta x} = g_0 
+       \quad \Rightarrow \quad
+       T_1 - T_0 = (g_0)\Delta x,
+\end{equation*}
+y mediante una diferencia atrasada en $x=L$
+\begin{equation*}
+       \frac{dT}{dx} \approx \frac{T_5 - T_4}{\Delta x} = g_0 
+       \quad \Rightarrow \quad
+       T_5 - T_4 = (g_L)\Delta x.
+\end{equation*}
+Se obtiene el siguiente sistema de ecuaciones,
+\begin{equation}
+       \begin{pmatrix}
+              -1 & 1 & 0 & 0 & 0 & 0 \\
+              1 & -2 & 1 & 0 & 0 & 0 \\
+              0 & 1 & -2 & 1 & 0 & 0 \\
+              0 & 0 & 1 & -2 & 1 & 0 \\
+              0 & 0 & 0 & 1 & -2 & 1 \\
+              0 & 0 & 0 & 0 & -1  & 1 
+       \end{pmatrix}
+       \begin{pmatrix}
+              T_0 \\
+              T_1 \\
+              T_2 \\ 
+              T_3 \\
+              T_4 \\
+              T_5 \\
+       \end{pmatrix}
+       = 
+       \begin{pmatrix}
+              (g_0) \Delta x \\
+              0 \\
+              0 \\ 
+              0 \\
+              0 \\
+              (g_L) \Delta x \\
+       \end{pmatrix},
+\end{equation}
+para que la solución tenga sentido físicamente tenemos que la suma de los flujos en la fronteras sea igual a cero, $g_0 + g_L = 0$.
+lo cual expresa que el flujo de calor que entra al sistema es el mismo que sale. Dicho de otra forma, en estado estacionario y sin fuentes internas, 
+la energía que ingresa por una frontera debe ser evacuada en su totalidad por la otra; de lo contrario, el sistema no alcanzaría el equilibrio térmico y 
+la temperatura crecería o decrecería indefinidamente.
+
+\subsubsection{Caso 2D}
+
+
+
 \section{Metodología e implementación}
 \label{sec:Metodologia}
 %
