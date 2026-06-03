@@ -340,31 +340,78 @@ corresponda. Por ejemplo, en las fronteras oeste y este se tiene
 y análogamente en las fronteras sur y norte para la derivada respecto de
 $y$. Las filas correspondientes de la matriz~\eqref{eq:matrizDirichlet2D}
 se modifican introduciendo entradas $-1$ y $+1$ en los nodos vecinos, y el
-vector del lado derecho recibe los valores $g_{*}\, h$ en las posiciones
+vector del lado derecho recibe los valores $g h$ en las posiciones
 de frontera.
 
-Para que la solución exista físicamente, en el caso puramente Neumann debe
+Para que la solución tenga sentido físicamente, en el caso con solamente condiciones Neumann debe de
 satisfacerse la condición de compatibilidad
 \begin{equation}
 \oint_{\partial\Omega} g\, ds = 0,
 \end{equation}
 es decir, el flujo neto a través de la frontera del dominio debe ser nulo;
 de lo contrario, en estado estacionario y sin fuentes internas, el sistema
-no alcanzaría el equilibrio térmico. Esta condición es la generalización
-bidimensional de la relación $g_0 + g_L = 0$ obtenida en el caso 1D y se
-sigue directamente del teorema de la divergencia aplicado a la ecuación de
-Laplace.
+no alcanzaría el equilibrio térmico. 
 
-\section{Metodología e implementación}
+\section{Implementación}
 \label{sec:Metodologia}
 %
-\textit{¿Qué se necesitaría para reproducir el trabajo? Describa algoritmos, hardware, bibliotecas y configuración.}\\
-Como ejemplo de ecuación, considere la siguiente expresión~\cite{TiltFilter}:
+
+\subsection{Caso 1D}
+
+Como se mostró, en el caso unidimensional la discretización del problema nos conduce a un sistema de ecuaciones lineales,
+cuya matriz es tridiagonal. Por lo tanto, el problema continuo de resolver la ecuación diferencial se reduce a invertir una matriz tridiagonal. 
+Para esto usaremos el algoritmo de Thomas.
+\subsection*{Algoritmo de Thomas}
+
+Sea un sistema tridiagonal $A\,\mathbf{x} = \mathbf{d}$, donde $A$ es una matriz
+tridiagonal de tamaño $n\times n$, $\mathbf{x}$ es el vector de incógnitas
+—en este caso la temperatura en cada nodo de la malla— y $\mathbf{d}$ contiene
+los términos independientes asociados a las condiciones de frontera. El sistema
+puede escribirse componente a componente como
 \begin{equation}
-\lambda(\Phi)=\lambda(0)\sqrt{1-\frac{\sin^2\Phi}{n_\text{ef}^2}}\;.
-\label{eq:ejemplo}
+a_i\, x_{i-1} + b_i\, x_i + c_i\, x_{i+1} = d_i,
+\qquad i = 1, \dots, n,
 \end{equation}
-donde $n_\text{ef}$ es el índice de refracción efectivo.
+con $a_1 = 0$ y $c_n = 0$. En forma matricial,
+\begin{equation}
+\begin{pmatrix}
+b_1    & c_1    &        &        & 0      \\
+a_2    & b_2    & c_2    &        &        \\
+       & a_3    & b_3    & \ddots &        \\
+       &        & \ddots & \ddots & c_{n-1}\\
+0      &        &        & a_n    & b_n
+\end{pmatrix}
+\begin{pmatrix} x_1 \\ x_2 \\ x_3 \\ \vdots \\ x_n \end{pmatrix}
+=
+\begin{pmatrix} d_1 \\ d_2 \\ d_3 \\ \vdots \\ d_n \end{pmatrix}.
+\label{eq:sistemaTridiagonal}
+\end{equation}
+
+El algoritmo de Thomas consiste en una eliminación gaussiana especializada
+que aprovecha la estructura tridiagonal y se ejecuta en dos pasos. Primero,
+un \emph{barrido hacia adelante} elimina las subdiagonales y normaliza las
+ecuaciones; partiendo de $c'_1 = c_1/b_1$ y $d'_1 = d_1/b_1$, se actualizan
+sucesivamente
+\begin{equation}
+c'_i = \frac{c_i}{b_i - a_i\, c'_{i-1}}, \qquad
+d'_i = \frac{d_i - a_i\, d'_{i-1}}{b_i - a_i\, c'_{i-1}},
+\qquad i = 2, \dots, n.
+\end{equation}
+A continuación, un \emph{barrido hacia atrás} resuelve el sistema triangular
+resultante mediante sustitución regresiva:
+\begin{equation}
+x_n = d'_n, \qquad
+x_i = d'_i - c'_i\, x_{i+1}, \qquad i = n-1, n-2, \dots, 1.
+\end{equation}
+
+Dado que cada barrido recorre la malla una sola vez con un número constante
+de operaciones por nodo, el algoritmo tiene complejidad temporal y de memoria
+$\mathcal{O}(n)$, lo que lo vuelve óptimo para sistemas tridiagonales. Como
+contrapartida, su naturaleza intrínsecamente secuencial —cada paso depende
+del anterior— dificulta su paralelización directa; variantes como el
+\emph{cyclic reduction} o el algoritmo PCR existen precisamente para
+sortear esta limitación en arquitecturas masivamente paralelas.
+
 %
 \section{Resultados}
 \label{sec:Resultados}
