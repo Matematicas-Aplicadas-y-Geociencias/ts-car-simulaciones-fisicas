@@ -1,35 +1,53 @@
 % Encabezado: aquí se cargan los paquetes y se hacen definiciones adicionales
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\documentclass[11pt,a4paper]{article}
-\usepackage{fullpage}                          % Márgenes amplios al estilo "fullpage"
-\usepackage[spanish,es-tabla]{babel}           % Tipografía y traducciones en español
-\usepackage[utf8]{inputenc}                    % Permite escribir acentos y ñ directamente
-\usepackage[T1]{fontenc}                       % Codificación de fuentes (mejor división silábica)
-\usepackage[onehalfspacing]{setspace}          % Interlineado 1.5
-\usepackage{graphicx}                          % Inclusión de gráficos
-\usepackage[breaklinks=true,colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue]{hyperref} % Referencias e hiperenlaces
-\usepackage{amsmath,amsthm,amssymb}            % Entornos y símbolos matemáticos
-\usepackage{icomma}                            % Coma decimal inteligente
-\usepackage[output-decimal-marker={,},per-mode=symbol]{siunitx}% Unidades del SI con coma decimal
-\usepackage{placeins}                          % Comando \FloatBarrier
-\usepackage[natbib,abbreviate=true,doi=false,style=numeric-comp,giveninits=true,sorting=none]{biblatex} % Bibliografía moderna (requiere biber)
+\documentclass[11pt,a4paper,twocolumn]{article}
+\usepackage[margin=2cm,columnsep=0.7cm]{geometry}    % Márgenes y separación entre columnas
+\usepackage[spanish,es-tabla]{babel}                  % Tipografía y traducciones en español
+\usepackage[utf8]{inputenc}                           % Permite escribir acentos y ñ directamente
+\usepackage[T1]{fontenc}                              % Codificación de fuentes
+\usepackage{graphicx}                                 % Inclusión de gráficos
+\usepackage[breaklinks=true,colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue]{hyperref}
+\usepackage{amsmath,amsthm,amssymb}                   % Entornos y símbolos matemáticos
+\usepackage{icomma}                                   % Coma decimal inteligente
+\usepackage[output-decimal-marker={,},per-mode=symbol]{siunitx}
+\usepackage{placeins}                                 % \FloatBarrier
+\usepackage[natbib,abbreviate=true,doi=false,style=numeric-comp,giveninits=true,sorting=none]{biblatex}
 \usepackage{tikz}
 \usetikzlibrary{decorations.pathreplacing,calligraphy}
+\usepackage{cuted}                                    % Bloques que abarcan ambas columnas (\begin{strip})
+\usepackage{flushend}                                 % Balancea columnas en la última página
+\usepackage{listings}
+\usepackage{xcolor}
 
-\addbibresource{MyBibliography.bib}            % Archivo .bib con las referencias
+\lstdefinestyle{fortran}{
+  language=[90]Fortran,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{green!60!black}\itshape,
+  commentstyle=\color{gray},
+  backgroundcolor=\color{gray!10},
+  frame=single,
+  framerule=0pt,
+  rulecolor=\color{gray!10},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=8pt,
+  xleftmargin=1.5em,
+  breaklines=true,
+  showstringspaces=false,
+}
 
-\graphicspath{{Figuras/}}                      % Carpeta donde se buscan las figuras
+
+\addbibresource{MyBibliography.bib}
+\graphicspath{{Figuras/}}
 
 \DeclareSIUnit{\dBm}{dBm}
 \DeclareSIUnit[per-mode=reciprocal]\WN{\per\centi\meter}
 
-
-
 \title{
        \null \vspace{-35mm}
 \includegraphics[width=3cm]{images/IFlogo.png}\hfill\includegraphics[width=3cm]{images/UNAMlogo.png}
-\\ 
+\\
 \vspace{1.0 cm}TEMAS SELECTOS DE CÓMPUTO DE ALTO RENDIMIENTO
 PARA SIMULACIONES FÍSICAS\\[1ex]
 \large Reporte de Simulación de Calor en 1D y 2D}
@@ -38,23 +56,21 @@ PARA SIMULACIONES FÍSICAS\\[1ex]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
-%}
 
+% --- Título y resumen abarcando las dos columnas ---
+\twocolumn[
+  \begin{@twocolumnfalse}
+    \maketitle
+    \begin{abstract}
+      \textit{.. ALGO}
+    \end{abstract}
+    \vspace{0.5cm}
+  \end{@twocolumnfalse}
+]
 
-\maketitle
-\vfill
-
-\renewcommand{\abstractname}{Resumen}
-\section*{\abstractname}
-\textit{.. ALGO}
 \thispagestyle{empty}
-%
-%
-\tableofcontents
-\thispagestyle{empty}
-\cleardoublepage
+
 \pagenumbering{arabic}
-\newpage
 %
 %
 \section{Introducción}
@@ -69,27 +85,27 @@ PARA SIMULACIONES FÍSICAS\\[1ex]
 \subsection{Ecuación de Calor}
 El flujo de calor por difusión en un medio continuo se rige por la ley de Fourier,
 que establece que el flujo de calor $\vec{J}_{q}$ es proporcinal al gradiente negativo
-de la temperatura, 
+de la temperatura,
 \begin{equation}
        \vec{J_q} = - \kappa \nabla T,
        \label{eq:Fourier}
 \end{equation}
 donde $\kappa$ representa la conductividad térmica del material.
-Al combinar \eqref{eq:Fourier}, con la ecuación de continuidad de la energía interna, 
-en ausencias de fuentes, obtenemos la ecuación de calor 
+Al combinar \eqref{eq:Fourier}, con la ecuación de continuidad de la energía interna,
+en ausencias de fuentes, obtenemos la ecuación de calor
 \begin{equation}
-\rho \, \, \partial_t U =  \rho \, c_p  \, \partial T =
-- \nabla \cdot \left( \vec{J}_{q} \right) = k \nabla^2 T 
-\quad \Rightarrow \quad 
-\partial_t T = \alpha \nabla^2 T,
+\begin{aligned}
+\rho \, \partial_t U &= \rho \, c_p \, \partial_t T \\
+                     &= -\nabla \cdot \vec{J}_{q} = k \nabla^2 T,
+\end{aligned}
 \label{eq:calor}
 \end{equation}
-con $\alpha = k/(\rho \, c_p)$. Nos centramos en el régimen estacionario para una y dos dimensiones sobre un 
-dominio rectangular $\Omega$, con distintitas condiciones en la frontera $\partial \Omega$,
+de donde $\partial_t T = \alpha \nabla^2 T$ con $\alpha = k/(\rho \, c_p)$.
+Nos centramos en el régimen estacionario para una y dos dimensiones sobre un
+dominio rectangular $\Omega$, con distintitas condiciones en la frontera $\partial \Omega$.
 En este caso, la ecuación \eqref{eq:calor} toma la forma de una ecuación de Laplace,
-
 \begin{equation}
-       \nabla^2 T = 0
+       \nabla^2 T = 0.
        \label{eq:Laplace}
 \end{equation}
 
@@ -98,18 +114,14 @@ En este caso, la ecuación \eqref{eq:calor} toma la forma de una ecuación de La
 Para la ecuación de Laplace, consideramos dos tipos de condiciones sobre la frontera $\partial \Omega$ del dominio rectangular:
 
 \textbf{Condiciones tipo Dirichlet:} se impone el valor de la temperatura sobre la frontera,
-
 \begin{equation}
 T(\mathbf{x}) = T_D(\mathbf{x}), \qquad \mathbf{x} \in \partial\Omega_D,
 \label{eq:Dirichlet}
 \end{equation}
-
 donde $T_D$ es una función conocida, para nuestro caso la tomaremos como constante, y $\partial \Omega_D$
 denota la porción de la frontera donde se aplica la condición.
 
-
-\textbf{Condiciones tipo Neumann:} se impone el valor del flujo normal de calor sobre la frontera, 
-
+\textbf{Condiciones tipo Neumann:} se impone el valor del flujo normal de calor sobre la frontera,
 \begin{equation}
 -k\frac{\partial T}{\partial n} = q_N(\mathbf{x}), \qquad \mathbf{x} \in \partial\Omega_N,
 \label{eq:Neumann}
@@ -118,40 +130,38 @@ o bien, de forma equivalente, la derivada normal de la temperatura:
 \begin{equation}
 \frac{\partial T}{\partial n} = g_N(\mathbf{x}), \qquad \mathbf{x} \in \partial\Omega_N,
 \end{equation}
-donde $\partial/\partial n$ denota la derivada en la dirección normal exterior a la frontera, 
+donde $\partial/\partial n$ denota la derivada en la dirección normal exterior a la frontera,
 $q_{N}$ es el flujo dado.
 
 %
 \subsection{Diferencias Finitas}
-Para resolver numéricamente la ecuación es necesario discretizar su dominio. 
-El método de diferencias finitas logra esto aproximando las derivadas mediante 
+Para resolver numéricamente la ecuación es necesario discretizar su dominio.
+El método de diferencias finitas logra esto aproximando las derivadas mediante
 desarrollos en serie de Taylor de la función que se quiere resolver.
 
 \subsubsection{Caso 1D}
 
-Partiendo de la ecuación~\eqref{eq:Laplace}, que en una dimensión tiene la siguiente forma, 
-
+Partiendo de la ecuación~\eqref{eq:Laplace}, que en una dimensión tiene la siguiente forma,
 \begin{equation}
        \frac{d^2 T}{dx^2} = 0,
-\end{equation}       
+\end{equation}
 para aproximar la segunda derivada, recurrimos al desarrollo en serie de Taylor de la función $T$
 en torno a $x$, donde $\Delta x$ es el espaciamiento de la malla sobre la que se resuelve la ecuación.
 En la Figura~\ref{fig:malla1D} se muestra la discretización resultante.
-
 
 \begin{equation}
        \frac{d^2 T}{d x^2} \approx \frac{T_{i+1} - 2 \, T_{i} + T_{i-1}}{(\Delta x)^2}
        = 0.
 \end{equation}
 donde adoptamos la notación,
-$T_i \equiv T(x_i)$, $T_{i\pm 1} \equiv T(x_i \pm \Delta x)$. Se observa que el problema continuo 
+$T_i \equiv T(x_i)$, $T_{i\pm 1} \equiv T(x_i \pm \Delta x)$. Se observa que el problema continuo
 se reduce a uno lineal
 \begin{equation}
-    T_{i+1} - 2\, T_i + T_{i-1} = 0, \qquad i = 1, \dots, N-2,
+    T_{i+1} - 2\, T_i + T_{i-1} = 0, \quad i = 1, \dots, N-2,
     \label{eq:laplaceDisc}
 \end{equation}
-donde $N$ es el número total de nodos en la malla. Las ecuaciones en los nodos de frontera 
-$(i=0)$ y $(i=N-1)$ se sustituyen por las condiciones de fronter correspondientes.
+donde $N$ es el número total de nodos en la malla. Las ecuaciones en los nodos de frontera
+$(i=0)$ y $(i=N-1)$ se sustituyen por las condiciones de frontera correspondientes.
 
 \begin{figure}[h]
        \centering
@@ -163,14 +173,16 @@ $(i=0)$ y $(i=N-1)$ se sustituyen por las condiciones de fronter correspondiente
 Suponiendo que queremos resolver la ecuación de Laplace en el intervalo
 $[0, L]$, con condiciones de frontera de Dirichlet, de tal forma que fijamos el valor de la temperatura
 en los extremos,
-
 \begin{equation}
        T(0) = T_0, \qquad T(L) = T_L,
 \end{equation}
 para ejemplificar el método, discretizamos el dominio en $N=6$ nodos, con $\Delta x = L /(N-1)$.
-La ecuación discretizada~\eqref{eq:laplaceDisc} se aplica en los nodos interiores $i=1,2,3,4$, 
-mientras que en los nodos de frontera imponemos directamente los valores dados por las condiciones de frontera. De tal forma que obtenemos, 
+La ecuación discretizada~\eqref{eq:laplaceDisc} se aplica en los nodos interiores $i=1,2,3,4$,
+mientras que en los nodos de frontera imponemos directamente los valores dados por las condiciones de frontera. De tal forma que obtenemos
 el siguiente sistema de ecuaciones,
+%
+% Bloque ancho: la matriz no cabe en una sola columna
+
 \begin{equation}
        \begin{pmatrix}
               1 & 0 & 0 & 0 & 0 & 0 \\
@@ -178,75 +190,25 @@ el siguiente sistema de ecuaciones,
               0 & 1 & -2 & 1 & 0 & 0 \\
               0 & 0 & 1 & -2 & 1 & 0 \\
               0 & 0 & 0 & 1 & -2 & 1 \\
-              0 & 0 & 0 & 0 & 0  & 1 
+              0 & 0 & 0 & 0 & 0  & 1
        \end{pmatrix}
        \begin{pmatrix}
-              T_0 \\
-              T_1 \\
-              T_2 \\ 
-              T_3 \\
-              T_4 \\
-              T_5 \\
+              T_0 \\ T_1 \\ T_2 \\ T_3 \\ T_4 \\ T_5
        \end{pmatrix}
-       = 
+       =
        \begin{pmatrix}
-              T_0 \\
-              0 \\
-              0 \\ 
-              0 \\
-              0 \\
-              T_L \\
-       \end{pmatrix}
+              T_0 \\ 0 \\ 0 \\ 0 \\ 0 \\ T_L
+       \end{pmatrix}.
 \end{equation}
-Suponiendo ahora condiciones frontera de Neumann, en los dos extremos,
-\begin{equation}
-\frac{dT}{dx}\bigg|_{x=0} = g_0, \qquad \frac{dT}{dx}\bigg|_{x=L} = g_L,
-\end{equation}
-el sistema ecuaciones queda prácticamente igual salvo por las ecuaciones asociadas a los nodos frontera. 
-En cada extremo, se aproxima la derivada mediante una diferencia adelanta en $x=0$
-\begin{equation*}
-       \frac{dT}{dx} \approx \frac{T_1 - T_0}{\Delta x} = g_0 
-       \quad \Rightarrow \quad
-       T_1 - T_0 = (g_0)\Delta x,
-\end{equation*}
-y mediante una diferencia atrasada en $x=L$
-\begin{equation*}
-       \frac{dT}{dx} \approx \frac{T_5 - T_4}{\Delta x} = g_0 
-       \quad \Rightarrow \quad
-       T_5 - T_4 = (g_L)\Delta x.
-\end{equation*}
-Se obtiene el siguiente sistema de ecuaciones,
-\begin{equation}
-       \begin{pmatrix}
-              -1 & 1 & 0 & 0 & 0 & 0 \\
-              1 & -2 & 1 & 0 & 0 & 0 \\
-              0 & 1 & -2 & 1 & 0 & 0 \\
-              0 & 0 & 1 & -2 & 1 & 0 \\
-              0 & 0 & 0 & 1 & -2 & 1 \\
-              0 & 0 & 0 & 0 & -1  & 1 
-       \end{pmatrix}
-       \begin{pmatrix}
-              T_0 \\
-              T_1 \\
-              T_2 \\ 
-              T_3 \\
-              T_4 \\
-              T_5 \\
-       \end{pmatrix}
-       = 
-       \begin{pmatrix}
-              (g_0) \Delta x \\
-              0 \\
-              0 \\ 
-              0 \\
-              0 \\
-              (g_L) \Delta x \\
-       \end{pmatrix},
-\end{equation}
-para que la solución tenga sentido físicamente tenemos que la suma de los flujos en la fronteras sea igual a cero, $g_0 + g_L = 0$.
-lo cual expresa que el flujo de calor que entra al sistema es el mismo que sale. Dicho de otra forma, en estado estacionario y sin fuentes internas, 
-la energía que ingresa por una frontera debe ser evacuada en su totalidad por la otra; de lo contrario, el sistema no alcanzaría el equilibrio térmico y 
-la temperatura crecería o decrecería indefinidamente.
+
+Si en cambio se imponen condiciones de frontera de Neumann, se fija el valor
+del flujo en los extremos del dominio. En este caso, las ecuaciones de los
+nodos de frontera ya no son triviales: la derivada en $i=0$ se aproxima
+mediante una diferencia adelantada, y la derivada en $i=N-1$ mediante una
+diferencia atrasada, lo que modifica las primeras y últimas filas del
+sistema manteniendo inalteradas las ecuaciones de los nodos interiores. 
+%
+
 
 \subsubsection{Caso 2D}
 
@@ -261,15 +223,18 @@ $x_i = i\,\Delta x$, $y_j = j\,\Delta y$. Aplicando la diferencia centrada
 de segundo orden a cada una de las derivadas
 parciales se obtiene la aproximación de cinco puntos
 \begin{equation}
-\frac{T_{i+1,j} - 2\, T_{i,j} + T_{i-1,j}}{\Delta x^{2}}
-+ \frac{T_{i,j+1} - 2\, T_{i,j} + T_{i,j-1}}{\Delta y^{2}}
-= 0.
+\begin{split}
+&\frac{T_{i+1,j} - 2\, T_{i,j} + T_{i-1,j}}{\Delta x^{2}} \\
+&\quad + \frac{T_{i,j+1} - 2\, T_{i,j} + T_{i,j-1}}{\Delta y^{2}} = 0.
+\end{split}
 \end{equation}
 En el caso particular de mallas con $\Delta x = \Delta y \equiv h$, la
 expresión anterior se simplifica al \emph{stencil de cinco puntos}
 \begin{equation}
-T_{i+1,j} + T_{i-1,j} + T_{i,j+1} + T_{i,j-1} - 4\, T_{i,j} = 0,
-\qquad i = 1,\dots,N_x-2, \; j = 1,\dots,N_y-2,
+\begin{split}
+&T_{i+1,j} + T_{i-1,j} + T_{i,j+1} + T_{i,j-1} - 4\, T_{i,j} = 0, \\
+&\quad i = 1,\dots,N_x-2,\; j = 1,\dots,N_y-2,
+\end{split}
 \label{eq:laplace2D}
 \end{equation}
 donde $N_x$ y $N_y$ son los números totales de nodos en cada dirección.
@@ -278,27 +243,18 @@ junto con el stencil que conecta cada nodo interior con sus cuatro vecinos.
 
 \begin{figure}[h]
        \centering
-       \includegraphics[width=0.55\linewidth]{images/malla2D.pdf}
+       \includegraphics[width=\linewidth]{images/malla2D.pdf}
        \caption{Discretización del dominio bidimensional y stencil de
                 cinco puntos asociado a la ecuación~\eqref{eq:laplace2D}.}
        \label{fig:malla2D}
 \end{figure}
 
-Suponiendo que se quiere resolver la ecuación de Laplace en el rectángulo
-$[0,L_x]\times[0,L_y]$ con condiciones de frontera de Dirichlet en los
-cuatro lados,
-\begin{align}
-T(0,y)   &= T^{\text{O}}(y), &
-T(L_x,y) &= T^{\text{E}}(y), \\
-T(x,0)   &= T^{\text{S}}(x), &
-T(x,L_y) &= T^{\text{N}}(x),
-\end{align}
-para ejemplificar el método discretizamos el dominio en $N_x = N_y = 4$
-nodos por lado, con $h = L_x/(N_x-1) = L_y/(N_y-1)$. Para escribir el
-sistema en forma matricial, los valores $T_{i,j}$ se reordenan en un
-vector unidimensional mediante una numeración lexicográfica
-$k = i + j\, N_x$, de modo que el sistema toma la forma $A\,\mathbf{T} = \mathbf{b}$
-con $\mathbf{T}\in\mathbb{R}^{N_x N_y}$. La matriz $A$ presenta una
+Para el caso bidimensional en el rectángulo $[0,L_x]\times[0,L_y]$
+con condiciones de Dirichlet en los cuatro lados, los valores $T_{i,j}$
+se reordenan en un vector unidimensional mediante la numeración
+lexicográfica $k = i + j\,N_x$, reduciendo el sistema a la forma
+$A\,\mathbf{T} = \mathbf{b}$ con $\mathbf{T}\in\mathbb{R}^{N_x N_y}$.
+Para una malla de $N_x = N_y = 4$ nodos por lado, la matriz $A$ tiene
 estructura \emph{bloque-tridiagonal}
 \begin{equation}
 A =
@@ -318,111 +274,98 @@ B =
 \end{pmatrix},
 \label{eq:matrizDirichlet2D}
 \end{equation}
-donde cada bloque es de tamaño $N_x \times N_x$, $I$ es la identidad y $B$
-codifica el acoplamiento dentro de una misma fila de la malla. Los
-bloques identidad en el primer y último bloque-fila imponen los valores
-prescritos en las fronteras sur y norte respectivamente, mientras que las
-entradas iguales a $1$ en la primera y última fila de $B$ imponen los
-valores prescritos en las fronteras oeste y este. El vector $\mathbf{b}$
-contiene los valores $T^{\text{O,E,S,N}}$ en las posiciones correspondientes
-a los nodos frontera y ceros en las demás.
+donde los bloques $I$ de identidad imponen las condiciones de frontera
+y $B$ codifica el stencil de cinco puntos en cada fila de la malla.
+El vector $\mathbf{b}$ contiene los valores prescritos en los nodos
+frontera y ceros en los interiores.
 
-Suponiendo ahora condiciones de frontera de Neumann en los cuatro lados,
-con flujos prescritos $g_{\text{O}}, g_{\text{E}}, g_{\text{S}}, g_{\text{N}}$
-en cada uno, el sistema de ecuaciones queda prácticamente igual salvo por
-las ecuaciones asociadas a los nodos frontera. En cada lado se aproxima la
-derivada normal mediante una diferencia adelantada o atrasada según
-corresponda. Por ejemplo, en las fronteras oeste y este se tiene
-\begin{equation*}
-\frac{T_{1,j} - T_{0,j}}{h} = g_{\text{O}}, \qquad
-\frac{T_{N_x-1,j} - T_{N_x-2,j}}{h} = g_{\text{E}},
-\end{equation*}
-y análogamente en las fronteras sur y norte para la derivada respecto de
-$y$. Las filas correspondientes de la matriz~\eqref{eq:matrizDirichlet2D}
-se modifican introduciendo entradas $-1$ y $+1$ en los nodos vecinos, y el
-vector del lado derecho recibe los valores $g h$ en las posiciones
-de frontera.
+Para condiciones de Neumann, las filas frontera de $A$ se reemplazan
+por las aproximaciones en diferencias adelantadas o atrasadas de la
+derivada normal, y $\mathbf{b}$ recibe los flujos correspondientes
+multiplicados por $h$. 
+\subsection{Resolución del sistema lineal}
 
-Para que la solución tenga sentido físicamente, en el caso con solamente condiciones Neumann debe de
-satisfacerse la condición de compatibilidad
-\begin{equation}
-\oint_{\partial\Omega} g\, ds = 0,
-\end{equation}
-es decir, el flujo neto a través de la frontera del dominio debe ser nulo;
-de lo contrario, en estado estacionario y sin fuentes internas, el sistema
-no alcanzaría el equilibrio térmico. 
+\subsubsection{Caso 1D}
+
+La matriz tridiagonal del sistema~\eqref{eq:laplaceDisc} admite una
+inversión directa en $\mathcal{O}(N)$ operaciones mediante el
+\emph{algoritmo de Thomas}, una variante de la eliminación gaussiana
+especializada para matrices tridiagonales. El método consta de dos
+barridos: uno hacia adelante para eliminar la subdiagonal y normalizar
+las ecuaciones, y otro hacia atrás para recuperar el vector solución
+por sustitución regresiva. Su complejidad óptima y su bajo consumo de
+memoria lo convierten en la elección estándar para este tipo de
+sistemas.
+
+\subsubsection{Caso 2D: método ADI}
+
+En dos dimensiones, la matriz del sistema discretizado tiene tamaño
+$N_x N_y \times N_x N_y$, por lo que su inversión directa no es viable.
+Se emplea entonces el \emph{método ADI} (\emph{Alternating Direction Implicit}),
+que divide cada iteración en dos semi-barridos: uno implícito en $x$ y
+explícito en $y$, y otro con los roles invertidos. Cada semi-barrido
+produce un conjunto de sistemas tridiagonales independientes
+---$N_y$ sistemas de tamaño $N_x$ en el primer paso, y $N_x$ de tamaño
+$N_y$ en el segundo---, resueltos eficientemente con el algoritmo de Thomas.
+El coste por iteración escala como $\mathcal{O}(N_x N_y)$.
+
+El método es naturalmente paralelizable, ya que los sistemas de un mismo
+semi-barrido pueden resolverse de forma simultánea, requiriendo únicamente
+que todos ellos finalicen antes de intercambiar la dirección implícita.
+La iteración prosigue hasta alcanzar la tolerancia $\varepsilon$ preestablecida,
+controlándose la convergencia mediante el parámetro iterativo $\Delta\tau$,
+cuyo valor, sin significado físico en el régimen estacionario, puede
+optimizarse con secuencias cíclicas.
+
 
 \section{Implementación}
 \label{sec:Metodologia}
-%
 
-\subsection{Caso 1D}
+La implementación se realizó en \textbf{Fortran}, utilizando las API de
+OpenMP y OpenACC, que facilitan la paralelización de código secuencial
+al distribuir la carga de cómputo entre múltiples hilos que operan
+simultáneamente.
 
-Como se mostró, en el caso unidimensional la discretización del problema nos conduce a un sistema de ecuaciones lineales,
-cuya matriz es tridiagonal. Por lo tanto, el problema continuo de resolver la ecuación diferencial se reduce a invertir una matriz tridiagonal. 
-Para esto usaremos el algoritmo de Thomas.
-\subsection*{Algoritmo de Thomas}
+En el siguiente bloque de código se muestra un ejemplo sencillo de la estructura de paralelización de una sección del código
+mediante OpenMP:
 
-Sea un sistema tridiagonal $A\,\mathbf{x} = \mathbf{d}$, donde $A$ es una matriz
-tridiagonal de tamaño $n\times n$, $\mathbf{x}$ es el vector de incógnitas
-—en este caso la temperatura en cada nodo de la malla— y $\mathbf{d}$ contiene
-los términos independientes asociados a las condiciones de frontera. El sistema
-puede escribirse componente a componente como
-\begin{equation}
-a_i\, x_{i-1} + b_i\, x_i + c_i\, x_{i+1} = d_i,
-\qquad i = 1, \dots, n,
-\end{equation}
-con $a_1 = 0$ y $c_n = 0$. En forma matricial,
-\begin{equation}
-\begin{pmatrix}
-b_1    & c_1    &        &        & 0      \\
-a_2    & b_2    & c_2    &        &        \\
-       & a_3    & b_3    & \ddots &        \\
-       &        & \ddots & \ddots & c_{n-1}\\
-0      &        &        & a_n    & b_n
-\end{pmatrix}
-\begin{pmatrix} x_1 \\ x_2 \\ x_3 \\ \vdots \\ x_n \end{pmatrix}
-=
-\begin{pmatrix} d_1 \\ d_2 \\ d_3 \\ \vdots \\ d_n \end{pmatrix}.
-\label{eq:sistemaTridiagonal}
-\end{equation}
+\begin{lstlisting}[style=fortran]
+!$omp parallel
+... operaciones ejecutadas por cada hilo
+!$omp end parallel
+\end{lstlisting}
 
-El algoritmo de Thomas consiste en una eliminación gaussiana especializada
-que aprovecha la estructura tridiagonal y se ejecuta en dos pasos. Primero,
-un \emph{barrido hacia adelante} elimina las subdiagonales y normaliza las
-ecuaciones; partiendo de $c'_1 = c_1/b_1$ y $d'_1 = d_1/b_1$, se actualizan
-sucesivamente
-\begin{equation}
-c'_i = \frac{c_i}{b_i - a_i\, c'_{i-1}}, \qquad
-d'_i = \frac{d_i - a_i\, d'_{i-1}}{b_i - a_i\, c'_{i-1}},
-\qquad i = 2, \dots, n.
-\end{equation}
-A continuación, un \emph{barrido hacia atrás} resuelve el sistema triangular
-resultante mediante sustitución regresiva:
-\begin{equation}
-x_n = d'_n, \qquad
-x_i = d'_i - c'_i\, x_{i+1}, \qquad i = n-1, n-2, \dots, 1.
-\end{equation}
+y su equivalente para OpenACC:
 
-Dado que cada barrido recorre la malla una sola vez con un número constante
-de operaciones por nodo, el algoritmo tiene complejidad temporal y de memoria
-$\mathcal{O}(n)$, lo que lo vuelve óptimo para sistemas tridiagonales. Como
-contrapartida, su naturaleza intrínsecamente secuencial —cada paso depende
-del anterior— dificulta su paralelización directa; variantes como el
-\emph{cyclic reduction} o el algoritmo PCR existen precisamente para
-sortear esta limitación en arquitecturas masivamente paralelas.
+\begin{lstlisting}[style=fortran]
+!$acc parallel
+... operaciones ejecutadas por cada hilo
+!$acc end parallel
+\end{lstlisting}
 
-%
+En la implementación se distribuye la carga de trabajo entre múltiples
+hilos que ejecutan operaciones de forma simultánea. El caso más común
+es la paralelización de un ciclo, que en OpenMP se logra con una sola
+directiva:
+
+\begin{lstlisting}[style=fortran]
+!$omp parallel do
+    do i = 1, N
+        ... operacion sobre el elemento i
+    end do
+!$omp end parallel do
+\end{lstlisting}
+
+Cada hilo toma un subconjunto de iteraciones del ciclo y las ejecuta de forma independiente. 
+Cabe señalar, sin embargo, que es necesario evitar las condiciones de carrera: 
+situaciones en las que dos o más hilos acceden y modifican el mismo bloque de memoria de forma simultánea, 
+produciendo resultados no deseados. En el contexto del método ADI, esto no representa un problema ya que 
+los sistemas tridiagonales de cada semi-barrido son completamente independientes entre sí.
+
 \section{Resultados}
 \label{sec:Resultados}
 %
 \textit{¿Cuáles son las respuestas medidas a la(s) pregunta(s) principal(es)?}\\
-% La Figura~\ref{fig:ejemplo} muestra un ejemplo.
-% \begin{figure}[htb!]
-%  \centering
-%  \includegraphics[width=0.65\textwidth]{ejemplo_grafica}
-%  \caption{\label{fig:ejemplo} Descripción de la figura.}
-% \end{figure}
 %
 \section{Conclusiones}
 \label{sec:Conclusiones}
@@ -432,16 +375,6 @@ La referencia~\cite{GP1StromSpannung} es un ejemplo de cómo citar un manual.
 %
 
 \printbibliography
-\vfill
 
-\section*{Declaración}
-
-Por medio de la presente declaro que este reporte fue elaborado de forma independiente y que se han indicado todas las fuentes y referencias necesarias.
-
-\begin{tabular}{@{}p{2.5in}p{2.5in}@{}}
- \\[5\bigskipamount]
-  \dotfill & \dotfill \\
-  Estudiante & Fecha \\
-\end{tabular}
 
 \end{document}
