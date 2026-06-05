@@ -50,8 +50,8 @@
 \\
 \vspace{1.0 cm}TEMAS SELECTOS DE CÓMPUTO DE ALTO RENDIMIENTO
 PARA SIMULACIONES FÍSICAS\\[1ex]
-\large Reporte de Simulación de Calor en 1D y 2D}
-\author{Fís. Saúl Ruano Sánchez \thanks{\href{mailto:s.ruano@estudiantes.fisica.unam.mx}{s.ruano@estudiantes.fisica.unam.mx}}}
+\large Reporte de Simulación de Ecuación de Calor 2D.}
+\author{Saúl Ruano Sánchez }
 \date{Semestre 2026-2}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -62,7 +62,8 @@ PARA SIMULACIONES FÍSICAS\\[1ex]
   \begin{@twocolumnfalse}
     \maketitle
     \begin{abstract}
-      \textit{.. ALGO}
+      \textit{Se estudia el uso de herramientas de paralelización para implementar un código que resuelve la ecuación de calor en su caso estacionario. 
+      Se realizan pruebas de rendimiento entre distintas APIs de paralelización, utilizando parámetros como tiempos de ejecución y eficiencia con múltiples hilos de trabajo en una CPU.}
     \end{abstract}
     \vspace{0.5cm}
   \end{@twocolumnfalse}
@@ -76,8 +77,12 @@ PARA SIMULACIONES FÍSICAS\\[1ex]
 \section{Introducción}
 \label{sec:Introduccion}
 %
-\textit{¿De qué trata el trabajo? ¿Cuál es la pregunta principal y por qué es interesante?}\\
-%
+El cómputo de alto rendimiento ha experimentado una transformación significativa con el surgimiento de APIs de paralelización como OpenMP~\cite{OpenMP} y OpenACC~\cite{OpenACC}, 
+que permiten aprovechar de forma eficiente los recursos de hardware actuales, procesadores multinúcleo y unidades de procesamiento gráfico (GPU), sin necesidad de reescribir por completo el código base. 
+
+En este trabajo se evalúa el rendimiento de ambas APIs al resolver la ecuación de Laplace en dos dimensiones mediante el método de diferencias finitas, comparando tiempos de ejecución, speedup y eficiencia en función del número de hilos. 
+El objetivo es determinar cuál de las dos herramientas se adapta mejor a arquitecturas de CPU para este tipo de problemas, y discutir las implicaciones de cada enfoque en un contexto de simulación física.
+
 \section{Fundamentos y teoría}
 \label{sec:Fundamentos}
 %
@@ -137,7 +142,7 @@ $q_{N}$ es el flujo dado.
 \subsection{Diferencias Finitas}
 Para resolver numéricamente la ecuación es necesario discretizar su dominio.
 El método de diferencias finitas logra esto aproximando las derivadas mediante
-desarrollos en serie de Taylor de la función que se quiere resolver.
+desarrollos en serie de Taylor de la función que se quiere resolver~\cite{Chung2002, Patankar1980}.
 
 \subsubsection{Caso 1D}
 
@@ -304,9 +309,8 @@ $N_x N_y \times N_x N_y$, por lo que su inversión directa no es viable.
 Se emplea entonces el \emph{método ADI} (\emph{Alternating Direction Implicit}),
 que divide cada iteración en dos semi-barridos: uno implícito en $x$ y
 explícito en $y$, y otro con los roles invertidos. Cada semi-barrido
-produce un conjunto de sistemas tridiagonales independientes
----$N_y$ sistemas de tamaño $N_x$ en el primer paso, y $N_x$ de tamaño
-$N_y$ en el segundo---, resueltos eficientemente con el algoritmo de Thomas.
+produce un conjunto de sistemas tridiagonales independientes, $N_y$ sistemas de tamaño $N_x$ en el primer paso, y $N_x$ de tamaño
+$N_y$ en el segundo, resueltos eficientemente con el algoritmo de Thomas.
 El coste por iteración escala como $\mathcal{O}(N_x N_y)$.
 
 El método es naturalmente paralelizable, ya que los sistemas de un mismo
@@ -362,17 +366,78 @@ situaciones en las que dos o más hilos acceden y modifican el mismo bloque de m
 produciendo resultados no deseados. En el contexto del método ADI, esto no representa un problema ya que 
 los sistemas tridiagonales de cada semi-barrido son completamente independientes entre sí.
 
+
 \section{Resultados}
 \label{sec:Resultados}
-%
-\textit{¿Cuáles son las respuestas medidas a la(s) pregunta(s) principal(es)?}\\
+
+\subsection{Rendimiento del código paralelo}
+
+Para evaluar la ganancia obtenida al paralelizar el código, se compara
+el tiempo de ejecución del programa en paralelo frente al serial
+(un solo hilo) mediante dos cantidades estándar en el computo paralelo.
+
+\textbf{Speedup:} mide qué tan rápido se ejecuta el programa en
+paralelo en comparación con la versión serial, y se define como la
+razón entre los tiempos de ejecución,
+\begin{equation}
+    S(p) = \frac{t_s}{t_p},
+    \label{eq:speedup}
+\end{equation}
+donde $t_s$ es el tiempo de ejecución serial y $t_p$ es el tiempo de
+ejecución con $p$ hilos. Un speedup ideal es $S(p) = p$, es decir,
+duplicar el número de hilos reduce a la mitad el tiempo de ejecución.
+En la práctica, la fracción del código que no puede paralelizarse
+limita el speedup máximo alcanzable.
+
+\textbf{Eficiencia:} mide qué fracción del speedup ideal se aprovecha
+efectivamente, y se define como
+\begin{equation}
+    E(p) = \frac{S(p)}{p} = \frac{t_s}{p\, t_p}.
+    \label{eq:eficiencia}
+\end{equation}
+Una eficiencia $E=1$ indica un uso perfecto de los
+$p$ hilos; valores menores indican que no todos los hilos están trabajando de manera eficiente. En la Figura~\ref{fig:speedup} y Figura~\ref{fig:Eficiencia} se muestran
+$S(p)$ y $E(p)$, respectivamente, en función del número de hilos para una malla de $420\times420$ nodos. Cabe recalcar que las pruebas de rendimiento
+fueron realizadas en un procesador intel Intel(R) Core(TM) i5-8250U CPU  1.60GHz.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{images/speedup.png}
+    \caption{Speedup $S(p)$ para las distintas API de paralelización. La línea
+             discontinua indica el speedup ideal $S = p$.}
+    \label{fig:speedup}
+\end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{images/eficiencia.png}
+    \caption{Eficiencia $E(p)$ para las distintitas API de paralelización. }
+    \label{fig:Eficiencia}
+\end{figure}
+
+
+Se observa una mejora considerable al usar 4 hilos en ambas APIs de paralelización. 
+La implementación con OpenMP se mantiene más cercana al caso ideal en términos de speedup, 
+mientras que la implementación con OpenACC, aunque muestra cierta mejoría, se aleja más de dicho caso ideal, 
+lo que sugiere que OpenACC no está optimizado para el tamaño de malla utilizado en la CPU.
+
+Al utilizar más de 4 hilos, ambas APIs mantienen un rendimiento similar al observado con 4 hilos. 
+Sin embargo, el cambio más notable se da en la eficiencia: en este aspecto, la implementación con OpenMP destaca claramente, 
+alcanzando un valor superior a 0.9 hasta el límite de 4 hilos, punto a partir del cual se observa un cambio significativo en la eficiencia.
+
+En cuanto a la implementación realizada con OpenACC, la eficiencia se ve afectada de manera drástica a partir del límite de 2 hilos, 
+lo que indica que los hilos de trabajo no son bien aprovechados en esta implementación.Esta última, sin embargo, podría funcionar mejor en una GPU, 
+ya que su forma de paralelizar con directivas y su capacidad para enviar trabajo pesado a los aceleradores le permitirían rendir más que en la CPU. 
+
 %
 \section{Conclusiones}
 \label{sec:Conclusiones}
 %
-\textit{¿Cuál es la respuesta final? ¿Cómo podría mejorarse el trabajo?}\\
-La referencia~\cite{GP1StromSpannung} es un ejemplo de cómo citar un manual.
-%
+Ambas APIs, OpenMP y OpenACC, mostraron una mejora considerable al usar 4 hilos. Sin embargo, OpenMP se mantuvo más cerca del caso ideal de speedup, mientras que OpenACC quedó más alejada, 
+lo que sugiere que nuestra implementación no es tan buena para el uso de múltiples hilos de trabajo. OpenMP alcanzó una eficiencia superior a 0.9 hasta los 4 hilos, demostrando un excelente aprovechamiento de los núcleos. 
+A partir de 4 hilos, la eficiencia comenzó a caer significativamente, lo cual indica que no siempre el uso de muchos hilos de trabajo implica un uso óptimo de los recursos. Por otro lado, la eficiencia de OpenACC se vio afectada por la CPU,
+pero se espera que en una arquitectura de GPU pueda funcionar de manera más óptima.
+
+En conclusión, para ejecuciones en CPU con múltiples hilos, OpenMP es claramente la mejor opción, mientras que para entornos con GPU, OpenACC podría ser más conveniente, 
+aunque se recomienda validarlo con pruebas específicas en dicho hardware.
 
 \printbibliography
 
