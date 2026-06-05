@@ -319,7 +319,14 @@ que todos ellos finalicen antes de intercambiar la dirección implícita.
 La iteración prosigue hasta alcanzar la tolerancia $\varepsilon$ preestablecida,
 controlándose la convergencia mediante el parámetro iterativo $\Delta\tau$,
 cuyo valor, sin significado físico en el régimen estacionario, puede
-optimizarse con secuencias cíclicas.
+optimizarse con secuencias cíclicas. En la Figura~/cite{fig:sim} se observa el resultado obtenido usando este método de resolución.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{images/sim.png}
+    \caption{Resultado de la resolución de la ecuación de calor en 2D usando el método ADI, después de 10000 interaciones.}
+    \label{fig:sim}
+\end{figure}
 
 
 \section{Implementación}
