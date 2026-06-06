@@ -6,8 +6,8 @@ Program Calor1D
   !
   ! Iteradores y tamaño del problema
   !
-  integer :: ii, jj
-  integer, parameter :: nn = 60
+  integer :: ii
+  integer, parameter :: nn = 61
   !
   ! Variables del dominio computacional
   !
@@ -27,10 +27,12 @@ Program Calor1D
   ! Dominio computacional
   !
   ll      = 10.d0
-  deltax  = 10.d0/nn
+  deltax  = 10.d0/dfloat(nn-1)
   ! Inicializacion de variables
   !
-  xx(:)   = 0.d0
+  do ii = 1, nn
+     xx(ii) = (ii - 1) * deltax
+  end do
   aa(:)   = 0.d0
   bb(:)   = 0.d0
   cc(:)   = 0.d0
@@ -71,13 +73,7 @@ Program Calor1D
   !
   ! Postproceso
   !
-  write(*,*) aa(:)
-  write(*,*) bb(:)
-  write(*,*) cc(:)
-  write(*,*) tt(:)
-  !
   do ii = 1, nn
-     write(101,*) (ii-1)*deltax, tt(ii)
+     write(*,*) xx(ii), tt(ii)
   end do
-  !
 end Program Calor1D
