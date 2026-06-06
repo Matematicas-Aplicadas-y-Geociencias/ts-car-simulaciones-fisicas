@@ -231,8 +231,8 @@ Program Calor2D
   ! el archivo queda desordenado y gnuplot (y otros graficadores) no
   ! los procesan bien.
   !
-  !archivo = 'salida.vtk'
+  archivo = 'salida.vtk'
   !
-  !call postproceso_vtk(xx,yy,tt(1:nx,1:ny,1), resid_tt ,archivo)
+  call postproceso_vtk(xx,yy,tt(1:nx,1:ny,1), resid_tt ,archivo)
   !
 end Program Calor2D

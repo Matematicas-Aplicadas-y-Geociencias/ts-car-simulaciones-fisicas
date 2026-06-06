@@ -1,0 +1,14 @@
+
+*** These modified files were found in JOE when it aborted on Tue Apr  7 17:49:06 2026
+*** JOE was aborted by UNIX signal 1
+
+*** File '(Unnamed)'
+INSTALL_PRO++.sh
+res_temp.f90
+mod_residuo_temp.f90
+
+*** File '* Startup Log *'
+Processing '/etc/joe/joerc'...
+Processing '/etc/joe/ftyperc'...
+Finished processing /etc/joe/ftyperc
+Finished processing /etc/joe/joerc
